@@ -1,24 +1,47 @@
-/* CodePocket - 깔끔하고 신뢰감 있는 모바일 앱 스타일
-   배경 틴트 + 입체적 카드/버튼, 큰 버튼, 한 손 조작 최적화 */
+/* CodePocket - 프리미엄 블루 & 레드 입체 디자인 (v4)
+   깊은 네이비~로열 블루 + 시그니처 레드 액센트 조합,
+   다층 그림자와 하이라이트로 입체감·고급감을 강화한 모바일 앱 스타일 */
 
 :root {
+  /* 블루 계열 (기본 구조색) */
+  --blue-950: #071e40;
   --blue-900: #0a2c5b;
+  --blue-800: #0d3770;
   --blue-700: #0f3d7a;
   --blue-600: #11448a;
   --blue-500: #1c5cb8;
-  --blue-100: #e8f0fb;
-  --blue-50: #f4f8fe;
-  --ink-900: #16233b;
+  --blue-400: #3f7ad1;
+  --blue-300: #9ec2ee;
+  --blue-200: #c4dbf6;
+  --blue-100: #e0edfc;
+  --blue-50: #eef5fd;
+  /* 레드 계열 (시그니처 액센트: 추가·설치·강조) */
+  --red-700: #b91c1c;
+  --red-600: #d32f2f;
+  --red-500: #e53e3e;
+  --red-100: #fde3e3;
+  --red-50: #fef2f2;
+  --red-edge: #8f1616;      /* 레드 버튼 밑면 */
+  /* 골드 (프리미엄 포인트) */
+  --gold: #e8b64c;
+  --gold-soft: #f7dfa8;
+  --ink-900: #14213a;
   --ink-600: #4a5a75;
   --ink-400: #8b97ab;
-  --line: #e3e9f2;
-  --bg: #f1f5fb;
+  --line: #d5e3f5;
+  --bg: #dcebfd;
+  --bg-deep: #c9def9;
   --surface: #ffffff;
   --danger: #d33a3a;
   --star: #f5b301;
   --radius: 16px;
-  --shadow: 0 4px 12px rgba(15, 61, 122, 0.1);
-  --shadow-soft: 0 1px 4px rgba(15, 61, 122, 0.06);
+  /* 입체 버튼 공통 토큰 */
+  --btn-face: linear-gradient(180deg, #ffffff 0%, #f4f8fe 55%, #eaf2fc 100%);
+  --btn-edge: #b9cfe9;
+  --btn-line: #d3e2f4;
+  --btn-ink: var(--blue-700);
+  --shadow: 0 4px 14px rgba(10, 44, 91, 0.12);
+  --shadow-soft: 0 1px 4px rgba(10, 44, 91, 0.07);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -32,10 +55,19 @@ html, body {
     'Noto Sans KR', 'Malgun Gothic', sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
-  overflow-x: hidden; /* 모바일 가로 넘침 방지 */
+  overflow-x: hidden;
 }
 
-body { min-height: 100vh; min-height: 100dvh; }
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* 프리미엄 배경: 블루 그라데이션 + 은은한 광택 레이어 */
+  background:
+    radial-gradient(1100px 480px at 85% -10%, rgba(28, 92, 184, 0.16), transparent 60%),
+    radial-gradient(900px 420px at -15% 20%, rgba(211, 47, 47, 0.07), transparent 55%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+}
 
 button {
   font-family: inherit;
@@ -46,15 +78,38 @@ button {
 
 input, textarea, select {
   font-family: inherit;
-  font-size: 16px; /* iOS 줌 방지 */
+  font-size: 16px;
 }
 
 .hidden { display: none !important; }
+
+/* ---------- 스크롤바 커스텀 (고급 블루) ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(15, 61, 122, 0.08); border-radius: 8px; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--blue-500), var(--blue-700));
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--blue-400), var(--blue-600)); }
+
+/* 서브화면(에디터 등) 내부 스크롤바에도 동일 적용 */
+.subview-body::-webkit-scrollbar { width: 8px; }
+.subview-body::-webkit-scrollbar-track { background: rgba(15, 61, 122, 0.06); }
+.subview-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--blue-400), var(--blue-600));
+  border-radius: 8px;
+}
+
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: var(--blue-600) rgba(15, 61, 122, 0.08); }
 
 /* ---------- 공통 컴포넌트 ---------- */
 .view { display: none; }
 .view.active { display: block; }
 
+/* 입체적 흰색 버튼 (기본형) */
 .btn {
   display: flex;
   align-items: center;
@@ -66,28 +121,78 @@ input, textarea, select {
   font-size: 17px;
   font-weight: 700;
   padding: 14px 18px;
-  transition: transform 0.08s ease, opacity 0.15s ease;
+  background: var(--btn-face);
+  color: var(--btn-ink);
+  border: 1.5px solid var(--btn-line);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 0 rgba(166, 194, 229, 0.35),
+    0 3px 0 var(--btn-edge),
+    0 6px 14px rgba(10, 44, 91, 0.14);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
-.btn:active { transform: scale(0.98); }
+.btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 0 rgba(166, 194, 229, 0.3),
+    0 0 0 var(--btn-edge),
+    0 2px 6px rgba(10, 44, 91, 0.14);
+}
 
+/* 강조(기본) 버튼: 로열 블루 - 저장 등 주요 액션 */
 .btn-primary {
-  background: var(--blue-600);
+  background: linear-gradient(180deg, #2f6fd6 0%, var(--blue-600) 55%, var(--blue-700) 100%);
   color: #fff;
+  border-color: var(--blue-800);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 0 rgba(7, 30, 64, 0.35),
+    0 3px 0 var(--blue-900),
+    0 6px 16px rgba(17, 68, 138, 0.4);
+}
+.btn-primary:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 var(--blue-900),
+    0 2px 6px rgba(17, 68, 138, 0.35);
 }
 .btn-primary:disabled { opacity: 0.5; }
 
 .btn-secondary {
-  background: var(--blue-100);
-  color: var(--blue-700);
+  background: var(--btn-face);
+  color: var(--btn-ink);
+}
+
+/* 시그니처 레드 솔리드 버튼 (설치 모달 외부 전환 등 강한 액션) */
+.btn-danger-solid {
+  background: linear-gradient(180deg, #ef4444 0%, var(--red-600) 55%, var(--red-700) 100%);
+  color: #fff;
+  border: 1.5px solid var(--red-edge);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 0 rgba(90, 8, 8, 0.35),
+    0 3px 0 var(--red-edge),
+    0 6px 16px rgba(211, 47, 47, 0.38);
+}
+.btn-danger-solid:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 var(--red-edge),
+    0 2px 6px rgba(211, 47, 47, 0.38);
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--blue-600);
   font-weight: 600;
+  border-color: transparent;
+  box-shadow: none;
 }
 
-.btn-danger { background: #fdecec; color: var(--danger); }
+.btn-danger { background: var(--red-50); color: var(--danger); border-color: #f3c8c8; box-shadow: 0 3px 0 #e7b6b6; }
 
 .btn-row { display: flex; gap: 10px; }
 
@@ -98,13 +203,19 @@ input, textarea, select {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: var(--blue-50);
+  background: var(--btn-face);
   color: var(--blue-700);
+  border: 1.5px solid var(--btn-line);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    0 2.5px 0 var(--btn-edge);
   font-size: 19px;
   flex: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
+.icon-btn:active { transform: translateY(2px); box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.9), 0 0 0 var(--btn-edge); }
 
-/* ---------- 헤더 (짙은 블루, 설치 칩 포함) ---------- */
+/* ---------- 헤더 (딥 네이비→로열 블루 + 골드 라인, 설치 칩 포함) ---------- */
 .app-header {
   position: sticky;
   top: 0;
@@ -115,9 +226,22 @@ input, textarea, select {
   gap: 10px;
   padding: 14px 16px 12px;
   padding-top: calc(14px + env(safe-area-inset-top));
-  background: linear-gradient(160deg, var(--blue-700), var(--blue-900));
-  border-bottom: none;
-  box-shadow: 0 2px 10px rgba(10, 44, 91, 0.25);
+  background:
+    radial-gradient(360px 140px at 90% 0%, rgba(63, 122, 209, 0.35), transparent 70%),
+    linear-gradient(160deg, var(--blue-700) 0%, var(--blue-900) 70%, var(--blue-950) 100%);
+  box-shadow: 0 3px 14px rgba(7, 30, 64, 0.35);
+}
+/* 헤더 하단 골드 헤어라인: 고급스러운 마감 */
+.app-header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(232, 182, 76, 0.85) 18%,
+    rgba(247, 223, 168, 0.95) 50%, rgba(232, 182, 76, 0.85) 82%, transparent 100%);
+  opacity: 0.75;
+  pointer-events: none;
 }
 .app-header h1 {
   margin: 0;
@@ -128,17 +252,23 @@ input, textarea, select {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  text-shadow: 0 1px 3px rgba(7, 30, 64, 0.5);
 }
 .app-header h1 .logo {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(145deg, var(--red-500), var(--red-700));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 2px 5px rgba(7, 30, 64, 0.4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-size: 15px;
+  flex: none;
 }
 .app-header .sub {
   margin: 2px 0 0;
@@ -146,30 +276,42 @@ input, textarea, select {
   color: rgba(207, 224, 245, 0.85);
 }
 
-/* 설치 칩: 헤더 우측 상단의 작은 버튼 ("앱설치" 문구만) */
+/* 설치 칩: 시그니처 레드 입체 버튼 (헤더 블루와 대비되어 눈에 잘 띔) */
 .install-chip {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 5px 12px;
+  min-height: 34px;
+  padding: 6px 15px;
   border-radius: 999px;
-  background: #fff;
-  color: var(--blue-700);
+  background: linear-gradient(180deg, #ef4444 0%, var(--red-600) 55%, var(--red-700) 100%);
+  color: #fff;
+  border: 1.5px solid var(--red-edge);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: -0.2px;
-  box-shadow: 0 2px 8px rgba(6, 16, 34, 0.3);
+  text-shadow: 0 1px 2px rgba(90, 8, 8, 0.45);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+    0 2.5px 0 var(--red-edge),
+    0 5px 10px rgba(7, 30, 64, 0.4);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
-.install-chip:active { transform: scale(0.96); }
+.install-chip:active {
+  transform: translateY(2.5px);
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.3), 0 0 0 var(--red-edge), 0 2px 5px rgba(7, 30, 64, 0.35);
+}
 
 /* ---------- 홈 화면 ---------- */
 #view-home { padding-bottom: 32px; }
 
-/* 상단 대형 CTA: 실제 사용 기능을 눈에 띄는 위치로 (입체적) */
+/* 상단 대형 CTA: 시그니처 레드 입체 버튼 (가장 중요한 액션) */
 .hero-actions {
-  margin: 16px 16px 0;
+  margin: 16px auto 0;
+  padding: 0 16px;
+  max-width: 560px;
+  width: 100%;
   text-align: center;
 }
 .btn-add-hero {
@@ -177,47 +319,61 @@ input, textarea, select {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 62px;
+  max-width: 100%;
+  min-height: 64px;
   border-radius: var(--radius);
-  background: linear-gradient(160deg, #2170d4, var(--blue-600) 55%, var(--blue-700));
+  background: linear-gradient(180deg, #f05252 0%, var(--red-600) 50%, var(--red-700) 100%);
   color: #fff;
-  font-size: 18.5px;
+  border: 1.5px solid var(--red-edge);
+  font-size: 19px;
   font-weight: 800;
-  letter-spacing: -0.2px;
-  text-shadow: 0 1px 2px rgba(6, 16, 34, 0.25);
+  letter-spacing: -0.3px;
+  text-shadow: 0 1px 2px rgba(90, 8, 8, 0.45);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 3px 0 var(--blue-900),
-    0 6px 16px rgba(17, 68, 138, 0.4);
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -3px 0 rgba(90, 8, 8, 0.3),
+    0 4px 0 var(--red-edge),
+    0 9px 20px rgba(211, 47, 47, 0.35);
   transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
 .btn-add-hero:active {
-  transform: translateY(3px);
+  transform: translateY(4px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 0 0 var(--blue-900),
-    0 2px 8px rgba(17, 68, 138, 0.35);
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -3px 0 rgba(90, 8, 8, 0.25),
+    0 0 0 var(--red-edge),
+    0 3px 8px rgba(211, 47, 47, 0.35);
 }
 .hero-hint {
-  margin: 8px 4px 0;
+  margin: 10px 8px 0;
   font-size: 12.5px;
-  color: var(--ink-400);
+  color: var(--ink-600);
+  overflow-wrap: anywhere;
 }
 
 .search-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 16px 16px 0;
+  margin: 16px auto 0;
   padding: 4px 14px;
-  border: 2px solid var(--line);
+  max-width: calc(560px - 32px);
+  width: calc(100% - 32px);
+  border: 2px solid var(--btn-line);
   border-radius: 14px;
   background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  box-shadow:
+    inset 0 1px 3px rgba(10, 44, 91, 0.06),
+    var(--shadow-soft);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.search-box:focus-within { border-color: var(--blue-500); }
+.search-box:focus-within {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(28, 92, 184, 0.15), var(--shadow-soft);
+}
 .search-box input {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
@@ -232,7 +388,10 @@ input, textarea, select {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 12px 16px 4px;
+  margin: 12px auto 4px;
+  padding: 0 16px;
+  max-width: 560px;
+  width: 100%;
 }
 .chip-row {
   flex: 1;
@@ -247,19 +406,22 @@ input, textarea, select {
   width: 44px;
   min-height: 40px;
   border-radius: 12px;
-  border: 1.5px solid var(--line);
-  background: var(--surface);
+  border: 1.5px solid var(--btn-line);
+  background: var(--btn-face);
   color: var(--ink-600);
   font-size: 15px;
   font-weight: 700;
-  box-shadow: 0 2px 0 #d3deee;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    0 2.5px 0 var(--btn-edge);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
-.chip-order-btn:active { transform: translateY(1px); box-shadow: 0 1px 0 #d3deee; }
+.chip-order-btn:active { transform: translateY(2px); box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.9), 0 0 0 var(--btn-edge); }
 .chip-order-btn.active {
-  background: var(--blue-600);
-  border-color: var(--blue-600);
+  background: linear-gradient(180deg, #ef4444, var(--red-600) 55%, var(--red-700));
+  border-color: var(--red-edge);
   color: #fff;
-  box-shadow: 0 2px 0 var(--blue-900);
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.35), 0 2.5px 0 var(--red-edge);
 }
 .chip {
   flex: none;
@@ -268,28 +430,35 @@ input, textarea, select {
   gap: 6px;
   padding: 9px 16px;
   border-radius: 999px;
-  border: 1.5px solid var(--line);
-  background: var(--surface);
+  border: 1.5px solid var(--btn-line);
+  background: var(--btn-face);
   color: var(--ink-600);
   font-size: 14.5px;
   font-weight: 600;
-  box-shadow: 0 2px 0 #d3deee;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    0 2.5px 0 var(--btn-edge);
   transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
-.chip:active { transform: translateY(1px); box-shadow: 0 1px 0 #d3deee; }
+.chip:active { transform: translateY(2px); box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.9), 0 0 0 var(--btn-edge); }
+/* 활성 칩: 로열 블루 + 골드 링 (선택 상태가 또렷하게) */
 .chip.active {
-  background: var(--blue-600);
-  border-color: var(--blue-600);
+  background: linear-gradient(180deg, #2f6fd6, var(--blue-600) 55%, var(--blue-700));
+  border-color: var(--blue-800);
   color: #fff;
-  box-shadow: 0 2px 0 var(--blue-900);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.35),
+    0 0 0 2px rgba(232, 182, 76, 0.55),
+    0 2.5px 0 var(--blue-900),
+    0 5px 10px rgba(17, 68, 138, 0.35);
 }
-/* "＋ 추가" 칩 */
+/* "＋ 추가" 칩: 레드 계열로 통일 */
 .chip-add {
-  border: 1.5px dashed var(--blue-500);
-  background: var(--blue-50);
-  color: var(--blue-600);
+  border: 1.5px dashed var(--red-500);
+  background: var(--red-50);
+  color: var(--red-600);
   font-weight: 700;
-  box-shadow: none;
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.8), 0 2.5px 0 #eec3c3;
 }
 /* 사용자 정의 카테고리 삭제(✕) 버튼 */
 .chip .chip-del {
@@ -299,8 +468,8 @@ input, textarea, select {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fdecec;
-  color: var(--danger);
+  background: var(--red-100);
+  color: var(--red-700);
   font-size: 11px;
   font-weight: 800;
   line-height: 1;
@@ -313,8 +482,8 @@ input, textarea, select {
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid var(--btn-line);
+  background: #fff;
   color: var(--ink-600);
   font-size: 13px;
   line-height: 1;
@@ -322,12 +491,15 @@ input, textarea, select {
 }
 .order-btns button:active { background: var(--blue-100); }
 
-/* 코드 카드 목록 (입체적 카드, 실제 코드 미리보기 크게) */
+/* 코드 카드 목록 (프리미엄 화이트 카드: 이중 보더 + 광택 + 레드 좌측 액센트) */
 .code-list {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding: 8px 16px 0;
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
 }
 .code-card {
   position: relative;
@@ -337,21 +509,42 @@ input, textarea, select {
   width: 100%;
   padding: 16px;
   border-radius: var(--radius);
-  background: var(--surface);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border: 1.5px solid var(--btn-line);
+  overflow: hidden;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 3px 0 #d8e2f0,
-    0 6px 14px rgba(15, 61, 122, 0.12);
+    inset 0 2px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 3.5px 0 var(--btn-edge),
+    0 8px 18px rgba(10, 44, 91, 0.13);
   text-align: left;
   transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
+/* 좌측 블루→레드 그라데이션 액센트 바 */
+.code-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--blue-500) 0%, var(--blue-700) 45%, var(--red-600) 100%);
+  opacity: 0.9;
+}
 .code-card:active {
-  transform: translateY(2px);
+  transform: translateY(2.5px);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 1px 0 #d8e2f0,
-    0 3px 8px rgba(15, 61, 122, 0.12);
-  background: var(--blue-50);
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    0 1px 0 var(--btn-edge),
+    0 3px 8px rgba(10, 44, 91, 0.12);
+}
+/* 저장 직후 하이라이트: 골드 광택 펄스 (새 항목을 바로 찾게 해줌) */
+.code-card.just-saved {
+  animation: card-flash 2.2s ease;
+}
+@keyframes card-flash {
+  0%   { box-shadow: 0 0 0 3px var(--gold), 0 0 24px rgba(232, 182, 76, 0.75), 0 3.5px 0 var(--btn-edge); }
+  18%  { box-shadow: 0 0 0 3px var(--gold), 0 0 30px rgba(232, 182, 76, 0.9), 0 3.5px 0 var(--btn-edge); }
+  60%  { box-shadow: 0 0 0 3px rgba(232, 182, 76, 0.45), 0 0 14px rgba(232, 182, 76, 0.35), 0 3.5px 0 var(--btn-edge); }
+  100% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.95), 0 3.5px 0 var(--btn-edge), 0 8px 18px rgba(10, 44, 91, 0.13); }
 }
 /* 실제 QR/바코드 미리보기 (크게: 사용처를 바로 확인) */
 .code-card .thumb {
@@ -361,7 +554,7 @@ input, textarea, select {
   border-radius: 12px;
   background: #fff;
   border: 1.5px solid var(--blue-100);
-  box-shadow: inset 0 1px 3px rgba(15, 61, 122, 0.1);
+  box-shadow: inset 0 1px 3px rgba(10, 44, 91, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -371,7 +564,7 @@ input, textarea, select {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  image-rendering: pixelated; /* QR 모듈 선명 */
+  image-rendering: pixelated;
 }
 .code-card .thumb .thumb-glyph {
   font-size: 40px;
@@ -389,7 +582,7 @@ input, textarea, select {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.code-card .name .star { color: var(--star); font-size: 15px; }
+.code-card .name .star { color: var(--star); font-size: 15px; flex: none; }
 .code-card .meta {
   margin-top: 6px;
   font-size: 13px;
@@ -409,6 +602,50 @@ input, textarea, select {
 }
 .badge.b-manual { background: #f0f1f4; color: var(--ink-600); }
 
+/* 목록 즐겨찾기 버튼 (흰색 입체 소형) */
+.code-card .icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 17px;
+}
+
+/* 저장 직후 하이라이트가 붙는 카드 외곽 골드 링 유지용 */
+.code-card.just-saved::after {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: var(--radius);
+  border: 2px solid rgba(232, 182, 76, 0.65);
+  pointer-events: none;
+}
+
+/* ---------- 맨 위로 떠 있는 버튼 (시그니처 레드 원형) ---------- */
+.scroll-top-btn {
+  position: fixed;
+  right: 18px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 30;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ef4444, var(--red-600) 55%, var(--red-700));
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  border: 1.5px solid var(--red-edge);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+    0 3px 0 var(--red-edge),
+    0 8px 18px rgba(211, 47, 47, 0.4),
+    0 2px 6px rgba(7, 30, 64, 0.25);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.2s ease;
+}
+.scroll-top-btn:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.3), 0 0 0 var(--red-edge), 0 3px 8px rgba(211, 47, 47, 0.4);
+}
+
 .empty-state {
   text-align: center;
   padding: 56px 32px;
@@ -418,46 +655,6 @@ input, textarea, select {
 .empty-state h3 { margin: 12px 0 6px; color: var(--ink-600); font-size: 17px; }
 .empty-state p { margin: 0; font-size: 14px; line-height: 1.5; }
 
-/* 카테고리 추가 모달 */
-.cat-field input {
-  width: 100%;
-  padding: 14px;
-  border: 2px solid var(--line);
-  border-radius: 12px;
-  font-size: 16px;
-  color: var(--ink-900);
-  background: var(--surface);
-  outline: none;
-}
-.cat-field input:focus { border-color: var(--blue-500); }
-.emoji-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.emoji-opt {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 1.5px solid var(--line);
-  background: var(--surface);
-  font-size: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.emoji-opt.selected {
-  border-color: var(--blue-500);
-  background: var(--blue-100);
-  box-shadow: 0 0 0 2px var(--blue-100);
-}
-.cat-modal-buttons {
-  display: flex;
-  gap: 10px;
-  margin-top: 6px;
-}
-.cat-modal-buttons .btn { flex: 1; min-height: 50px; }
-
 /* ---------- 서브 화면(추가/수정/카메라/보기) ---------- */
 .subview {
   position: fixed;
@@ -465,7 +662,9 @@ input, textarea, select {
   z-index: 40;
   display: none;
   flex-direction: column;
-  background: var(--bg);
+  background:
+    radial-gradient(900px 380px at 90% -5%, rgba(28, 92, 184, 0.14), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
 }
 .subview.open { display: flex; }
 
@@ -475,16 +674,21 @@ input, textarea, select {
   gap: 10px;
   padding: 12px 16px;
   padding-top: calc(12px + env(safe-area-inset-top));
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  background:
+    radial-gradient(320px 120px at 88% 0%, rgba(63, 122, 209, 0.35), transparent 70%),
+    linear-gradient(160deg, var(--blue-700) 0%, var(--blue-900) 75%);
+  box-shadow: 0 2px 10px rgba(7, 30, 64, 0.3);
+  border-bottom: 2px solid rgba(232, 182, 76, 0.5);
 }
-.subview-header h2 { flex: 1; margin: 0; font-size: 18px; font-weight: 800; }
+.subview-header h2 { flex: 1; margin: 0; font-size: 18px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(7, 30, 64, 0.5); }
+.subview-header .icon-btn { background: rgba(255, 255, 255, 0.14); border-color: rgba(255,255,255,0.25); color: #fff; box-shadow: none; }
 
 .subview-body {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 저장 버튼 고정 액션바: 스크롤해도 항상 하단에 보임 (한 손 저장) */
@@ -493,8 +697,10 @@ input, textarea, select {
   bottom: 0;
   margin: 20px -16px calc(-24px - env(safe-area-inset-bottom));
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: var(--surface);
-  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid var(--btn-line);
+  box-shadow: 0 -6px 18px rgba(10, 44, 91, 0.1);
 }
 
 .field { margin-bottom: 18px; }
@@ -510,14 +716,18 @@ input, textarea, select {
 .field select {
   width: 100%;
   padding: 14px;
-  border: 2px solid var(--line);
+  border: 2px solid var(--btn-line);
   border-radius: 12px;
   font-size: 16px;
   color: var(--ink-900);
   background: var(--surface);
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.field input:focus, .field textarea:focus { border-color: var(--blue-500); }
+.field input:focus, .field textarea:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(28, 92, 184, 0.14);
+}
 .field textarea { resize: vertical; min-height: 84px; font-family: ui-monospace, monospace; }
 
 .field .hint { margin-top: 6px; font-size: 12px; color: var(--ink-400); line-height: 1.45; }
@@ -525,10 +735,11 @@ input, textarea, select {
 /* 코드 유형 세그먼트 */
 .seg {
   display: flex;
-  background: #e2eaf5;
+  background: var(--blue-200);
   border-radius: 12px;
   padding: 4px;
   gap: 4px;
+  box-shadow: inset 0 2px 4px rgba(10, 44, 91, 0.12);
 }
 .seg button {
   flex: 1;
@@ -539,7 +750,11 @@ input, textarea, select {
   font-size: 15px;
   font-weight: 700;
 }
-.seg button.active { background: var(--surface); color: var(--blue-700); box-shadow: 0 1px 4px rgba(15,61,122,0.15); }
+.seg button.active {
+  background: var(--btn-face);
+  color: var(--blue-700);
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.95), 0 1px 4px rgba(10,44,91,0.22);
+}
 
 /* 미리보기 */
 .preview-box {
@@ -548,11 +763,13 @@ input, textarea, select {
   align-items: center;
   justify-content: center;
   min-height: 210px;
-  border: 2px dashed #c8d5e8;
+  border: 2px dashed var(--blue-300);
   border-radius: var(--radius);
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f6faff 100%);
   margin-bottom: 6px;
   overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(10, 44, 91, 0.06);
 }
 .preview-box canvas { max-width: 100%; }
 .preview-empty { color: var(--ink-400); font-size: 13.5px; padding: 20px; text-align: center; line-height: 1.5; }
@@ -659,24 +876,65 @@ input, textarea, select {
   flex-wrap: wrap;
   gap: 10px;
   padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--btn-line);
   background: var(--surface);
 }
-.viewer-actions .btn { min-height: 50px; }
+.viewer-actions .btn { min-height: 50px; flex: 1; }
 .btn-bright {
-  background: var(--blue-100);
+  background: var(--btn-face);
   color: var(--blue-700);
 }
-.btn-bright.active { background: var(--star); color: #fff; }
+.btn-bright.active { background: var(--star); color: #fff; border-color: #d99f00; box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.4), 0 3px 0 #b88800; }
 
 /* 원본 사진 보기 */
 .viewer-photo {
   max-width: 70vw;
   max-height: 22vh;
   border-radius: 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--btn-line);
   object-fit: contain;
 }
+
+/* ---------- 카테고리 추가 모달 ---------- */
+.cat-field input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid var(--btn-line);
+  border-radius: 12px;
+  font-size: 16px;
+  color: var(--ink-900);
+  background: var(--surface);
+  outline: none;
+}
+.cat-field input:focus { border-color: var(--blue-500); }
+.emoji-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.emoji-opt {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1.5px solid var(--btn-line);
+  background: var(--btn-face);
+  font-size: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.95), 0 2px 0 var(--btn-edge);
+}
+.emoji-opt.selected {
+  border-color: var(--blue-500);
+  background: var(--blue-100);
+  box-shadow: 0 0 0 2px var(--blue-100);
+}
+.cat-modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+.cat-modal-buttons .btn { flex: 1; min-height: 50px; }
 
 /* ---------- 모달 / 시트 ---------- */
 .modal-backdrop {
@@ -686,15 +944,24 @@ input, textarea, select {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(10, 20, 40, 0.45);
+  background: rgba(7, 18, 40, 0.5);
+  backdrop-filter: blur(3px);
 }
+.modal-backdrop.modal-center { align-items: center; padding: 20px; }
 .modal-sheet {
   width: 100%;
   max-width: 520px;
-  background: var(--surface);
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
   border-radius: 20px 20px 0 0;
   padding: 20px 18px calc(18px + env(safe-area-inset-bottom));
+  border-top: 3px solid var(--gold);
+  box-shadow: 0 -10px 40px rgba(7, 18, 40, 0.35);
   animation: sheet-up 0.22s ease;
+}
+.modal-center .modal-sheet {
+  border-radius: 20px;
+  border-top: 3px solid var(--gold);
+  box-shadow: 0 18px 50px rgba(7, 18, 40, 0.4);
 }
 @keyframes sheet-up {
   from { transform: translateY(40px); opacity: 0.5; }
@@ -702,6 +969,52 @@ input, textarea, select {
 }
 .modal-title { margin: 0 0 8px; font-size: 18px; font-weight: 800; text-align: center; }
 .modal-msg { margin: 0 0 16px; font-size: 14px; color: var(--ink-600); text-align: center; line-height: 1.55; white-space: pre-line; }
+
+/* ---------- 전용 설치 안내 모달 (date 프로젝트 이식) ---------- */
+.install-modal-sheet { max-width: 400px; text-align: center; }
+.install-modal-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  background: linear-gradient(145deg, var(--blue-500) 0%, var(--blue-700) 55%, var(--red-600) 130%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    0 4px 0 var(--blue-900),
+    0 8px 18px rgba(17, 68, 138, 0.4);
+}
+.install-steps {
+  margin: 4px 0 14px;
+  padding: 14px 14px 14px 34px;
+  text-align: left;
+  background: var(--blue-50);
+  border: 1.5px solid var(--blue-100);
+  border-radius: 12px;
+  color: var(--ink-600);
+  font-size: 14px;
+  line-height: 2;
+}
+.install-steps b { color: var(--blue-700); }
+.install-steps .share-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: var(--blue-200);
+  color: var(--blue-800);
+  font-size: 11px;
+  font-weight: 800;
+}
+#install-modal-ext .ext-hint { margin-top: 8px; text-align: center; }
+#install-modal-ext .btn + .hint { color: var(--ink-400); }
+#install-modal-close { margin-top: 14px; }
 
 /* ---------- 토스트 ---------- */
 #toast {
@@ -713,9 +1026,11 @@ input, textarea, select {
   max-width: 86vw;
   padding: 11px 18px;
   border-radius: 999px;
-  background: rgba(22, 35, 59, 0.92);
+  background: linear-gradient(180deg, rgba(20, 33, 58, 0.95), rgba(10, 22, 44, 0.95));
   color: #fff;
   font-size: 14px;
+  border: 1px solid rgba(232, 182, 76, 0.35);
+  box-shadow: 0 8px 22px rgba(7, 18, 40, 0.4);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -724,13 +1039,10 @@ input, textarea, select {
 
 /* ---------- 데스크톱 폭 대응 (반응형) ---------- */
 @media (min-width: 700px) {
-  .app-header,
-  .search-box, .chip-wrap, .code-list,
-  .hero-actions { max-width: 560px; margin-left: auto; margin-right: auto; }
-  .app-header { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+  .app-header { border-left: 1px solid rgba(255,255,255,0.12); border-right: 1px solid rgba(255,255,255,0.12); }
 }
 
 /* 다크 모드 대응(시스템 설정 따름) - 가독성 유지 위해 최소한만 */
 @media (prefers-color-scheme: dark) {
-  :root { --line: #dde5f0; --bg: #eef2f9; }
+  :root { --line: #d5e3f5; --bg: #dcebfd; --bg-deep: #cfe2fa; }
 }

@@ -1,11 +1,14 @@
 /* CodePocket Service Worker
  * - 앱 셸(정적 자산) 선캐시: 설치 후 오프라인 완전 동작
- * - 런타임: 캐시 우선(stale-while-revalidate), 탐색 요청은 오프라인 시 index.html 폴백
+ * - HTML/문서: 네트워크 우선(갱신 즉시 반영), 실패 시 캐시 폴백
+ * - CSS/JS/아이콘: 네트워크 우선(stale-while-revalidate 유사), 오프라인 시 캐시 폴백
+ *   → 디자인/기능 업데이트가 캐시에 갇히지 않도록 함
  * - 항상 상대 경로 사용 (GitHub Pages 하위 경로 대응)
  */
 'use strict';
 
-const CACHE_NAME = 'codepocket-v1';
+/* 배포 시 디자인/구조 변경마다 VERSION 숫자를 올려 캐시를 강제 갱신 */
+const CACHE_NAME = 'codepocket-v4';
 
 const PRECACHE_URLS = [
   './',
@@ -62,7 +65,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // 외부 요청은 캐시하지 않음
 
-  // 페이지 탐색: 캐시된 index.html 폴백
+  // 페이지 탐색: 네트워크 우선, 오프라인 시 index.html 폴백
   if (req.mode === 'navigate') {
     event.respondWith(
       (async () => {
@@ -84,21 +87,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 정적 자산: 캐시 우선 + 백그라운드 갱신
+  // 정적 자산: 네트워크 우신 + 실패/오프라인 시 캐시 폴백 (업데이트 즉시 반영)
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
-      const cached = await cache.match(req);
-      const network = fetch(req)
-        .then((res) => {
-          if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
-          return res;
-        })
-        .catch(() => undefined);
-      if (cached) return cached;
-      const res = await network;
-      if (res) return res;
-      return new Response('오프라인', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      try {
+        const fresh = await fetch(req);
+        if (fresh && fresh.ok) cache.put(req, fresh.clone()).catch(() => {});
+        return fresh;
+      } catch (_) {
+        const cached = await cache.match(req);
+        if (cached) return cached;
+        return new Response('오프라인', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      }
     })()
   );
 });

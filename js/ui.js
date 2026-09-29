@@ -227,6 +227,7 @@
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'code-card';
+      card.dataset.id = c.id;
 
       const cat = CP.catById(c.category);
       const typeLabel = c.type === 'barcode' ? CP.fmtLabel(c.format) || '바코드' : 'QR 코드';
@@ -287,6 +288,38 @@
       toast(c.favorite ? '즐겨찾기에 추가했습니다.' : '즐겨찾기를 해제했습니다.');
     } catch (_) {
       toast('처리에 실패했습니다.');
+    }
+  }
+
+  // ---------- 카드 하이라이트 & 맨 위로 ----------
+  // 저장 직후 방금 카드로 스크롤하고 잠깐 빛나는 효과를 준다
+  function flashCard(id) {
+    requestAnimationFrame(() => {
+      const card = [...document.querySelectorAll('.code-card')].find((el) => el.dataset.id === id);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.classList.add('just-saved');
+      setTimeout(() => card.classList.remove('just-saved'), 2400);
+    });
+  }
+
+  // 목록 맨 위로: 스크롤이 내려가면 표시되는 떠 있는 버튼
+  function setupScrollTop() {
+    const btn = document.getElementById('btn-scroll-top');
+    if (!btn) return;
+    const toggle = () => {
+      btn.classList.toggle('hidden', window.scrollY < 320);
+    };
+    window.addEventListener('scroll', toggle, { passive: true });
+    toggle();
+  }
+
+  function goToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const first = document.querySelector('.code-card');
+    if (first) {
+      first.classList.add('just-saved');
+      setTimeout(() => first.classList.remove('just-saved'), 1600);
     }
   }
 
@@ -416,6 +449,13 @@
       }
       closeSubview('view-editor');
       await reload();
+      // 방금 저장한 카드로 자동 스크롤 + 하이라이트 (새 항목이 목록 어디 있는지 찾아다니는 불편 제거)
+      if (state.editingId) {
+        flashCard(state.editingId);
+      } else {
+        const newest = visibleCodes().find((c) => c.value === value);
+        if (newest) flashCard(newest.id);
+      }
     } catch (e) {
       console.warn(e);
       toast('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
@@ -666,6 +706,10 @@
     // 상단 히어로 CTA (유일한 '코드 추가' 버튼)
     on($('#btn-add-hero'), 'click', () => openEditor(null));
     on($('#btn-save'), 'click', saveFromEditor);
+
+    // 목록 맨 위로 버튼
+    setupScrollTop();
+    on($('#btn-scroll-top'), 'click', goToTop);
 
     on($('#btn-shot'), 'click', async () => {
       await openCamera(async (result) => {
