@@ -34,14 +34,36 @@
   }
 
   // ---------- 카테고리 ----------
-  const CATEGORIES = [
-    { id: 'all',      emoji: '🗂️', label: '전체' },
+  // 기본 카테고리 (변경 금지: id가 저장 데이터의 category 값과 연결됨)
+  const BASE_CATEGORIES = [
     { id: 'hospital', emoji: '🏥', label: '병원' },
     { id: 'office',   emoji: '🏢', label: '사무실' },
     { id: 'parking',  emoji: '🚗', label: '주차장' },
     { id: 'gym',      emoji: '💪', label: '헬스장' },
     { id: 'other',    emoji: '📦', label: '기타' }
   ];
+  const ALL_ID = 'all';
+  const ALL_CATEGORY = { id: ALL_ID, emoji: '🗂️', label: '전체' };
+
+  // 사용자 정의 카테고리: localStorage에 저장 { id, emoji, label }
+  const CUSTOM_KEY = 'cp_custom_categories';
+  function loadCustomCategories() {
+    try {
+      const raw = localStorage.getItem(CUSTOM_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      return arr
+        .filter((c) => c && typeof c.id === 'string' && c.id && typeof c.label === 'string' && c.label)
+        .map((c) => ({ id: c.id, emoji: c.emoji || '🏷️', label: String(c.label).slice(0, 8) }));
+    } catch (_) { return []; }
+  }
+  function saveCustomCategories(list) {
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); } catch (_) { /* 무시 */ }
+  }
+
+  const CATEGORIES = [ALL_CATEGORY, ...BASE_CATEGORIES, ...loadCustomCategories()];
+  const DEFAULT_CATEGORIES = CATEGORIES;
   const catById = (id) => CATEGORIES.find((c) => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
 
   // 카테고리 순서 관리: 사용 빈도 + 수동 이동 순위를 localStorage에 저장
@@ -61,15 +83,17 @@
     try { localStorage.setItem(ORDER_KEY, JSON.stringify(st)); } catch (_) { /* 무시 */ }
   }
 
-  // 칩 표시 순서: [사용자가 올린 순위] -> [나머지는 사용 빈도 내림차순] -> [기본 순서]
+  // 칩 표시 순서: [전체] -> [사용자가 올린 순위] -> [나머지는 사용 빈도 내림차순]
   function getOrderedCategories() {
     const st = loadOrderState();
     const pinned = st.order.filter((id) => CATEGORIES.some((c) => c.id === id));
     const rest = CATEGORIES
-      .filter((c) => !pinned.includes(c.id))
+      .filter((c) => c.id !== ALL_ID && !pinned.includes(c.id))
       .slice()
       .sort((a, b) => (st.counts[b.id] || 0) - (st.counts[a.id] || 0));
-    return pinned.map((id) => CATEGORIES.find((c) => c.id === id)).concat(rest);
+    return [ALL_CATEGORY]
+      .concat(pinned.map((id) => CATEGORIES.find((c) => c.id === id)))
+      .concat(rest);
   }
 
   function getCategoryCount(id) {
@@ -105,6 +129,40 @@
 
   function resetCategoryOrder() {
     try { localStorage.removeItem(ORDER_KEY); } catch (_) { /* 무시 */ }
+  }
+
+  // ---------- 사용자 정의 카테고리 추가/삭제 ----------
+  function addCustomCategory(label, emoji) {
+    const clean = String(label || '').trim().slice(0, 8);
+    if (!clean) return null;
+    // 이름 중복 방지 (기본 + 사용자 정의, 대소문자 무시)
+    if (CATEGORIES.some((c) => c.label.toLowerCase() === clean.toLowerCase())) return null;
+    const cat = {
+      id: 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      emoji: emoji || '🏷️',
+      label: clean
+    };
+    const list = loadCustomCategories();
+    list.push(cat);
+    saveCustomCategories(list);
+    CATEGORIES.push(cat); // 현재 세션에도 즉시 반영
+    return cat;
+  }
+
+  function removeCustomCategory(id) {
+    const list = loadCustomCategories();
+    const idx = list.findIndex((c) => c.id === id);
+    if (idx < 0) return false;
+    list.splice(idx, 1);
+    saveCustomCategories(list);
+    const cIdx = CATEGORIES.findIndex((c) => c.id === id);
+    if (cIdx >= 0) CATEGORIES.splice(cIdx, 1);
+    // 순서 데이터에서도 제거
+    const st = loadOrderState();
+    st.order = st.order.filter((x) => x !== id);
+    delete st.counts[id];
+    saveOrderState(st);
+    return true;
   }
 
   // ---------- 포맷 이름 ----------
@@ -236,6 +294,10 @@
   CP.escapeHtml = escapeHtml;
   CP.fmtDate = fmtDate;
   CP.CATEGORIES = CATEGORIES;
+  CP.BASE_CATEGORIES = BASE_CATEGORIES;
+  CP.loadCustomCategories = loadCustomCategories;
+  CP.addCustomCategory = addCustomCategory;
+  CP.removeCustomCategory = removeCustomCategory;
   CP.catById = catById;
   CP.getOrderedCategories = getOrderedCategories;
   CP.getCategoryCount = getCategoryCount;

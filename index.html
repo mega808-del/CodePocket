@@ -8,7 +8,7 @@
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#11448a" />
+  <meta name="theme-color" content="#0a2c5b" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -17,6 +17,15 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png" />
 
   <link rel="stylesheet" href="css/style.css" />
+  <script>
+    /* PWA 설치 가능 판정은 Service Worker 등록 즉시 시작되어야 하므로 최상단에서 등록.
+       isSecureContext: https, localhost, 127.0.0.1 허용 / file:// 자동 제외 */
+    if ('serviceWorker' in navigator && window.isSecureContext) {
+      navigator.serviceWorker.register('sw.js').catch(function (err) {
+        console.warn('SW 등록 실패(오프라인 캐싱 비활성):', err);
+      });
+    }
+  </script>
 </head>
 <body>
   <!-- ============ 홈 화면 ============ -->
@@ -26,16 +35,14 @@
         <h1><span class="logo">▣</span> CodePocket</h1>
         <p class="sub">내 QR·바코드 보관함</p>
       </div>
+      <button id="btn-install" class="install-chip" type="button" aria-label="앱 설치">앱설치</button>
     </header>
 
-    <!-- 설치 카드: 첫 화면에서 가장 눈에 잘 띄게 -->
-    <section id="install-card" class="welcome-card">
-      <h2>📲 앱으로 설치하기</h2>
-      <p>홈 화면에 추가하면 오프라인에서도<br />언제든 바로 실행할 수 있어요.</p>
-      <button id="btn-install" class="btn btn-primary" type="button">📲 앱으로 설치하기</button>
-      <p id="install-hint" class="install-hint hidden"></p>
-      <button id="btn-skip" type="button">설치하지 않고 바로 사용하기 →</button>
-    </section>
+    <!-- 실제 사용 기능(추가)을 최상단 눈에 띄는 위치로 -->
+    <div class="hero-actions">
+      <button id="btn-add-hero" class="btn-add-hero" type="button">＋ 코드 추가</button>
+      <p class="hero-hint">카메라로 찍거나 갤러리에서 선택하면 자동 인식돼요</p>
+    </div>
 
     <!-- 검색 -->
     <div class="search-box">
@@ -54,13 +61,9 @@
     <div class="empty-state hidden" id="empty-state">
       <div class="emoji">📭</div>
       <h3>저장된 코드가 없습니다</h3>
-      <p>아래 <b>＋ 코드 추가</b> 버튼으로<br />병원·주차장·사무실의 QR/바코드를 저장해 보세요.</p>
+      <p>위 <b>＋ 코드 추가</b> 버튼으로<br />병원·주차장·사무실의 QR/바코드를 저장해 보세요.</p>
     </div>
 
-    <!-- 하단 탭바 -->
-    <nav class="tabbar">
-      <button id="btn-add" class="btn-add" type="button">＋ 코드 추가</button>
-    </nav>
   </main>
 
   <!-- ============ 추가/수정 화면 ============ -->
@@ -163,6 +166,25 @@
     </div>
   </section>
 
+  <!-- 카테고리 추가 모달 -->
+  <div id="cat-modal" class="modal-backdrop hidden">
+    <div class="modal-sheet" role="dialog" aria-modal="true">
+      <h3 class="modal-title">카테고리 추가</h3>
+      <div class="field cat-field">
+        <label for="cat-label-input">카테고리 이름</label>
+        <input id="cat-label-input" type="text" maxlength="8" placeholder="예: 학원" />
+      </div>
+      <div class="field cat-field">
+        <label>아이콘 선택</label>
+        <div id="cat-emoji-row" class="emoji-row"></div>
+      </div>
+      <div class="cat-modal-buttons">
+        <button id="cat-cancel" class="btn btn-secondary" type="button">취소</button>
+        <button id="cat-submit" class="btn btn-primary" type="button">추가하기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 범용 모달 -->
   <div id="modal" class="modal-backdrop hidden">
     <div class="modal-sheet" role="dialog" aria-modal="true">
@@ -195,15 +217,5 @@
   <script src="js/generator.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
-  <script>
-    // Service Worker 등록 (file:// 프로토콜이나 미지원 브라우저에서는 조용히 건너뜀)
-    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js').catch(function (err) {
-          console.warn('SW 등록 실패(오프라인 캐싱 비활성):', err);
-        });
-      });
-    }
-  </script>
 </body>
 </html>

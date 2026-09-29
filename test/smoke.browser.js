@@ -81,7 +81,9 @@ function check(name, cond, extra) {
   await page.goto('http://127.0.0.1:8931/index.html', { waitUntil: 'networkidle0' });
   await page.waitForSelector('#view-home', { timeout: 5000 });
   check('부팅: 홈 화면 렌더', true);
-  check('설치 버튼 존재', await page.$eval('#btn-install', (el) => el.textContent.includes('설치')));
+  check('설치 버튼 존재', await page.$eval('#btn-install', (el) => el.textContent.includes('앱설치')));
+  check('하단 중복 버튼 없음', (await page.$('#btn-add')) === null);
+  check('상단 추가 버튼 존재', (await page.$('#btn-add-hero')) !== null);
   check('CodePocket 타이틀', (await page.title()).includes('CodePocket'));
 
   // 2) 빈 상태 표시
@@ -90,7 +92,7 @@ function check(name, cond, extra) {
     .catch(() => check('빈 상태 안내 표시', false));
 
   // 3) 코드 추가 (직접 입력 - QR)
-  await page.click('#btn-add');
+  await page.click('#btn-add-hero');
   await page.waitForSelector('#view-editor.open', { timeout: 3000 });
   check('에디터 열림', true);
 
@@ -100,6 +102,10 @@ function check(name, cond, extra) {
   await page.click('#btn-save');
   await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 1, { timeout: 3000 });
   check('코드 저장 후 카드 1개', true);
+  // 카드 썸네일(비동기 QR 생성)이 실제 이미지로 교체될 때까지 대기
+  await page.waitForFunction(() => !!document.querySelector('.code-card .thumb img'), { timeout: 5000 })
+    .then(() => check('카드에 실제 QR 미리보기 표시', true))
+    .catch(() => check('카드에 실제 QR 미리보기 표시', false));
   const cardText = await page.$eval('.code-card', (el) => el.textContent);
   check('카드에 이름 표시', cardText.includes('우리집 주차장'));
 
@@ -138,7 +144,7 @@ function check(name, cond, extra) {
   await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 1);
 
   // 7) 두 번째 코드 (바코드 - EAN) 추가 후 카테고리 필터
-  await page.click('#btn-add');
+  await page.click('#btn-add-hero');
   await page.waitForSelector('#view-editor.open');
   await page.type('#inp-name', '헬스장 락커');
   await page.select('#inp-category', 'gym');
@@ -224,7 +230,7 @@ function check(name, cond, extra) {
 
   // 13) 이름 없이 저장 -> 자동 이름 생성 (카테고리 병원 지정)
   // 저장 버튼은 스티커 액션바로 항상 보이므로 스크롤 없이 클릭 가능
-  await page.click('#btn-add');
+  await page.click('#btn-add-hero');
   await page.waitForSelector('#view-editor.open');
   await page.type('#inp-value', 'PARKING-C1-777');
   await page.select('#inp-category', 'hospital');
@@ -244,8 +250,47 @@ function check(name, cond, extra) {
     for (let i = 0; i < 5; i++) up.click();
   });
   await page.click('#chip-order-btn'); // 편집 완료
-  const firstChip = await page.$eval('.chip', (el) => el.textContent);
-  check('카테고리 순서 이동: 기타가 맨 위', firstChip.includes('기타'), firstChip);
+  // '전체' 칩은 항상 첫 번째(고정), 그 다음 칩이 이동된 '기타'여야 함
+  const firstTwoChips = await page.$$eval('.chip', (els) => els.slice(0, 2).map((el) => el.textContent));
+  check('카테고리 순서 이동: 전체 다음 기타가 맨 위', firstTwoChips[0].includes('전체') && firstTwoChips[1].includes('기타'), firstTwoChips.join(' | '));
+
+  // 14b) 사용자 정의 카테고리 추가/삭제 (입력란 + 아이콘 선택)
+  await page.evaluate(() => document.getElementById('chip-row').querySelector('.chip-add').click());
+  await page.waitForSelector('#cat-modal:not(.hidden)', { timeout: 3000 });
+  check('카테고리 추가 모달 열림', true);
+  await page.type('#cat-label-input', '학원');
+  // 아이콘 6번째(🎓) 선택
+  await page.evaluate(() => document.querySelectorAll('#cat-emoji-row .emoji-opt')[5].click());
+  await page.click('#cat-submit');
+  await page.waitForFunction(() => document.getElementById('cat-modal').classList.contains('hidden'), { timeout: 3000 });
+  await page.waitForFunction(() => [...document.querySelectorAll('.chip')].some((c) => c.textContent.includes('학원')), { timeout: 3000 })
+    .then(() => check('사용자 정의 카테고리(학원) 칩 추가', true))
+    .catch(() => check('사용자 정의 카테고리(학원) 칩 추가', false));
+
+  // 에디터 셀렉트에도 반영되는지
+  await page.click('#btn-add-hero');
+  await page.waitForSelector('#view-editor.open');
+  const catOpts = await page.$eval('#inp-category', (el) => [...el.options].map((o) => o.value));
+  check('에디터 카테고리 셀렉트에 사용자 정의 반영', catOpts.some((v) => v.startsWith('u_')));
+  await page.click('#view-editor [data-close]');
+
+  // 편집 모드에서 ✕ 삭제
+  await page.click('#chip-order-btn');
+  await page.waitForFunction(() => document.getElementById('chip-row').classList.contains('editing'));
+  await page.evaluate(() => {
+    const chips = [...document.querySelectorAll('.chip')];
+    const target = chips.find((c) => c.textContent.includes('학원'));
+    target.querySelector('.chip-del').click();
+  });
+  await page.waitForFunction(() => [...document.querySelectorAll('#modal-buttons .btn')].some((b) => b.textContent === '삭제'), { timeout: 3000 });
+  await page.evaluate(() => {
+    const del = [...document.querySelectorAll('#modal-buttons .btn')].find((b) => b.textContent === '삭제');
+    del.click();
+  });
+  await page.waitForFunction(() => ![...document.querySelectorAll('.chip')].some((c) => c.textContent.includes('학원')), { timeout: 3000 })
+    .then(() => check('사용자 정의 카테고리 삭제', true))
+    .catch(() => check('사용자 정의 카테고리 삭제', false));
+  await page.click('#chip-order-btn'); // 편집 모드 종료
 
   // 15) 모바일 뷰포트에서 가로 넘침 없음 확인 (기타 글자 잘림 문제 재발 방지)
   const overflow = await page.evaluate(() => {
