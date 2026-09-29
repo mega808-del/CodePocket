@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <title>CodePocket - 내 QR·바코드 보관함</title>
+  <meta name="description" content="병원, 사무실, 주차장, 헬스장 QR코드와 바코드를 휴대폰에 저장하고 필요할 때 바로 크게 보여주는 앱" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#11448a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="CodePocket" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- ============ 홈 화면 ============ -->
+  <main id="view-home" class="view active">
+    <header class="app-header">
+      <div>
+        <h1><span class="logo">▣</span> CodePocket</h1>
+        <p class="sub">내 QR·바코드 보관함</p>
+      </div>
+    </header>
+
+    <!-- 설치 카드: 첫 화면에서 가장 눈에 잘 띄게 -->
+    <section id="install-card" class="welcome-card">
+      <h2>📲 앱으로 설치하기</h2>
+      <p>홈 화면에 추가하면 오프라인에서도<br />언제든 바로 실행할 수 있어요.</p>
+      <button id="btn-install" class="btn btn-primary" type="button">📲 앱으로 설치하기</button>
+      <p id="install-hint" class="install-hint hidden"></p>
+      <button id="btn-skip" type="button">설치하지 않고 바로 사용하기 →</button>
+    </section>
+
+    <!-- 검색 -->
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input id="search-input" type="search" placeholder="코드 검색 (이름, 메모)" autocomplete="off" enterkeyhint="search" />
+    </div>
+
+    <!-- 카테고리 칩 (순서 편집 버튼 포함) -->
+    <div class="chip-wrap">
+      <button id="chip-order-btn" class="chip-order-btn" type="button" aria-label="카테고리 순서 편집" title="카테고리 순서 편집">⇅</button>
+      <div id="chip-row" class="chip-row" role="tablist" aria-label="카테고리"></div>
+    </div>
+
+    <!-- 코드 카드 목록 -->
+    <div id="code-list" class="code-list" aria-live="polite"></div>
+    <div class="empty-state hidden" id="empty-state">
+      <div class="emoji">📭</div>
+      <h3>저장된 코드가 없습니다</h3>
+      <p>아래 <b>＋ 코드 추가</b> 버튼으로<br />병원·주차장·사무실의 QR/바코드를 저장해 보세요.</p>
+    </div>
+
+    <!-- 하단 탭바 -->
+    <nav class="tabbar">
+      <button id="btn-add" class="btn-add" type="button">＋ 코드 추가</button>
+    </nav>
+  </main>
+
+  <!-- ============ 추가/수정 화면 ============ -->
+  <section id="view-editor" class="subview" aria-hidden="true">
+    <header class="subview-header">
+      <button class="icon-btn" data-close="view-editor" type="button" aria-label="뒤로">←</button>
+      <h2 id="editor-title">코드 추가</h2>
+    </header>
+    <div class="subview-body">
+      <div class="photo-actions">
+        <button id="btn-shot" class="btn btn-secondary" type="button">📷 카메라로 촬영</button>
+        <button id="btn-gallery" class="btn btn-secondary" type="button">🖼️ 갤러리 선택</button>
+      </div>
+
+      <div id="preview-box" class="preview-box">
+        <canvas id="preview-canvas" class="hidden" width="10" height="10"></canvas>
+        <p id="preview-empty" class="preview-empty">카메라 촬영 또는 갤러리 선택 시<br />인식된 코드가 여기에 표시됩니다.</p>
+      </div>
+
+      <div class="field">
+        <label>코드 유형</label>
+        <div class="seg" id="type-seg">
+          <button type="button" data-type="qr" class="active">QR 코드</button>
+          <button type="button" data-type="barcode">바코드</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="inp-value">코드 내용 <span id="scan-badge" class="badge hidden">자동 인식됨</span></label>
+        <textarea id="inp-value" rows="3" placeholder="자동 인식 또는 직접 입력"></textarea>
+        <p class="hint">QR 링크, 숫자 바코드 등을 직접 붙여넣을 수도 있어요.</p>
+      </div>
+
+      <div class="field">
+        <label for="inp-name">이름 (선택 - 비우면 자동으로 지어요)</label>
+        <input id="inp-name" type="text" maxlength="40" placeholder="예: 서울병원 진료카드" />
+      </div>
+
+      <div class="field">
+        <label for="inp-memo">메모 (선택)</label>
+        <input id="inp-memo" type="text" maxlength="60" placeholder="예: 냉장고에 붙여두는 용도" />
+      </div>
+
+      <div class="field">
+        <label for="inp-category">카테고리</label>
+        <select id="inp-category">
+          <option value="hospital">🏥 병원</option>
+          <option value="office">🏢 사무실</option>
+          <option value="parking">🚗 주차장</option>
+          <option value="gym">💪 헬스장</option>
+          <option value="other">📦 기타</option>
+        </select>
+      </div>
+
+      <!-- 저장 버튼: 항상 보이는 고정 액션바 (스크롤해도 사라지지 않음) -->
+      <div class="editor-actionbar">
+        <button id="btn-save" class="btn btn-primary" type="button">💾 저장하기</button>
+      </div>
+    </div>
+    <input id="file-input" type="file" accept="image/*" class="hidden" />
+  </section>
+
+  <!-- ============ 카메라/이미지 스캐너 ============ -->
+  <section id="view-camera" class="subview" aria-hidden="true">
+    <header class="subview-header">
+      <button class="icon-btn" data-close="view-camera" type="button" aria-label="닫기">✕</button>
+      <h2>코드 스캔</h2>
+      <button id="btn-pick-image" class="icon-btn" type="button" aria-label="갤러리에서 선택" title="갤러리에서 선택">🖼️</button>
+    </header>
+    <div class="camera-stage">
+      <video id="camera-video" playsinline muted autoplay></video>
+      <div class="scan-frame"><div class="box"></div></div>
+      <p id="scan-msg" class="scan-msg">사각형 안에 QR/바코드를 맞춰주세요</p>
+    </div>
+    <div id="camera-error" class="camera-error hidden">
+      <div class="emoji">📷</div>
+      <p id="camera-error-text"></p>
+      <button id="btn-camera-retry" class="btn btn-secondary" type="button" style="max-width:260px">다시 시도</button>
+    </div>
+    <input id="camera-file-input" type="file" accept="image/*" class="hidden" />
+  </section>
+
+  <!-- ============ 뷰어 (큰 화면 표시) ============ -->
+  <section id="view-viewer" class="subview" aria-hidden="true">
+    <header class="subview-header">
+      <button class="icon-btn" data-close="view-viewer" type="button" aria-label="뒤로">←</button>
+      <h2>코드 보기</h2>
+      <button id="btn-fullscreen" class="icon-btn" type="button" aria-label="전체 화면" title="전체 화면">⛶</button>
+    </header>
+    <div class="viewer-body">
+      <img id="viewer-photo" class="viewer-photo hidden" alt="원본 카드 사진" />
+      <canvas id="viewer-canvas" width="600" height="600"></canvas>
+      <div class="viewer-name"><span id="viewer-name-text"></span><span id="viewer-star" class="star hidden">★</span></div>
+      <div id="viewer-meta" class="viewer-meta"></div>
+      <div id="viewer-value" class="viewer-value"></div>
+    </div>
+    <div class="viewer-actions">
+      <button id="btn-brightness" class="btn btn-bright" type="button">☀️ 밝기 최대</button>
+      <button id="btn-edit" class="btn btn-secondary" type="button">✏️ 수정</button>
+    </div>
+  </section>
+
+  <!-- 범용 모달 -->
+  <div id="modal" class="modal-backdrop hidden">
+    <div class="modal-sheet" role="dialog" aria-modal="true">
+      <h3 id="modal-title" class="modal-title"></h3>
+      <p id="modal-msg" class="modal-msg"></p>
+      <div id="modal-buttons"></div>
+    </div>
+  </div>
+
+  <!-- 전역 오류 안내 (흰 화면 방지용 최후 방어) -->
+  <div id="fatal" class="empty-state hidden" style="position:fixed;inset:0;background:#fff;z-index:100;padding-top:30vh">
+    <div class="emoji">⚠️</div>
+    <h3>일시적인 오류가 발생했습니다</h3>
+    <p>페이지를 새로고침해 주세요.<br />저장된 데이터는 안전하게 보존됩니다.</p>
+    <button onclick="location.reload()" class="btn btn-primary" style="max-width:240px;margin:16px auto 0">새로고침</button>
+  </div>
+
+  <div id="toast" role="status"></div>
+
+  <!-- vendor (오프라인 번들) -->
+  <script src="vendor/qrcode.min.js"></script>
+  <script src="vendor/zxing.umd.min.js"></script>
+
+  <!-- 앱 (순서 중요) -->
+  <script src="js/util.js"></script>
+  <script src="js/barcodes.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/install.js"></script>
+  <script src="js/scanner.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    // Service Worker 등록 (file:// 프로토콜이나 미지원 브라우저에서는 조용히 건너뜀)
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (err) {
+          console.warn('SW 등록 실패(오프라인 캐싱 비활성):', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
