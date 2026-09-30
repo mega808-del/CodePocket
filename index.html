@@ -83,6 +83,12 @@
         <button id="btn-gallery" class="btn btn-secondary" type="button">🖼️ 갤러리 선택</button>
       </div>
 
+      <div class="field">
+        <label for="inp-name">이름</label>
+        <input id="inp-name" type="text" maxlength="40" placeholder="예: 병원 출입카드" />
+        <p class="hint">입력한 이름이 홈 화면 버튼 이름이 돼요. (비우면 자동으로 지어요)</p>
+      </div>
+
       <div id="preview-box" class="preview-box">
         <canvas id="preview-canvas" class="hidden" width="10" height="10"></canvas>
         <p id="preview-empty" class="preview-empty">카메라 촬영 또는 갤러리 선택 시<br />인식된 코드가 여기에 표시됩니다.</p>
@@ -100,12 +106,6 @@
         <label for="inp-value">코드 내용 <span id="scan-badge" class="badge hidden">자동 인식됨</span></label>
         <textarea id="inp-value" rows="3" placeholder="자동 인식 또는 직접 입력"></textarea>
         <p class="hint">QR 링크, 숫자 바코드 등을 직접 붙여넣을 수도 있어요.</p>
-      </div>
-
-      <div class="field">
-        <label for="inp-name">이름</label>
-        <input id="inp-name" type="text" maxlength="40" placeholder="예: 병원 출입카드" />
-        <p class="hint">입력한 이름이 홈 화면 버튼 이름이 돼요. (비우면 자동으로 지어요)</p>
       </div>
 
       <div class="field">

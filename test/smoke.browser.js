@@ -109,6 +109,17 @@ function check(name, cond, extra) {
     .then(() => check('빈 상태 안내 표시', true))
     .catch(() => check('빈 상태 안내 표시', false));
 
+  // 2b) 에디터: 이름 입력 칸이 촬영/갤러리 버튼 바로 아래에 있는지
+  await page.click('#btn-add-hero');
+  await page.waitForSelector('#view-editor.open', { timeout: 3000 });
+  const nameRightAfterPhoto = await page.evaluate(() => {
+    const photo = document.querySelector('#view-editor .photo-actions');
+    return photo.nextElementSibling !== null &&
+      photo.nextElementSibling.querySelector('#inp-name') !== null;
+  });
+  check('이름 입력 칸이 촬영/갤러리 버튼 바로 아래', nameRightAfterPhoto);
+  await page.click('#view-editor [data-close]');
+
   // 3) 코드 추가 (직접 입력 - QR): 사용자 입력 이름이 그대로 버튼이 되는지
   await page.click('#btn-add-hero');
   await page.waitForSelector('#view-editor.open', { timeout: 3000 });
@@ -127,6 +138,13 @@ function check(name, cond, extra) {
   const cardText = await page.$eval('.code-card', (el) => el.textContent);
   check('카드에 입력한 이름 표시', cardText.includes('우리집 주차장'));
   check('카드에 QR CODE 태그 표시', /QR\s*CODE/.test(cardText), cardText);
+  // 이름이 파란색 3D 버튼 스타일인지 (블루 그라데이션 + 흰 글씨)
+  const nameStyle = await page.$eval('.code-card .name', (el) => {
+    const s = getComputedStyle(el);
+    return { bgImage: s.backgroundImage, color: s.color, radius: s.borderRadius, shadow: s.boxShadow };
+  });
+  check('이름이 파란 그라데이션 버튼', /gradient/.test(nameStyle.bgImage) && /rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)/.test(nameStyle.color), JSON.stringify(nameStyle));
+  check('이름 버튼에 입체 그림자', nameStyle.shadow !== 'none' && nameStyle.radius !== '0px', nameStyle.radius);
 
   // 4) 뷰어: 카드 클릭 -> QR 재생성 캔버스 확인
   await page.click('.code-card');
