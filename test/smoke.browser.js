@@ -1,4 +1,4 @@
-// CodePocket 헤드리스 브라우저 스모크 테스트
+// CodePocket 헤드리스 브라우저 스모크 테스트 (이름 기반 카드 + ⋮ 메뉴)
 // 실행: node test/smoke.browser.js
 // 최초 실행 시 puppeteer-core를 test/.deps에 자동 설치합니다 (프로젝트 의존성에 추가되지 않음).
 const fs = require('fs');
@@ -77,6 +77,23 @@ function check(name, cond, extra) {
   page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
   page.on('pageerror', (e) => pageErrors.push(String(e)));
 
+  // 카드의 ⋮ 메뉴 열기 / 메뉴 항목 클릭 헬퍼
+  const openMenuFor = (namePart) => page.evaluate((part) => {
+    const card = [...document.querySelectorAll('.code-card')].find((c) => c.textContent.includes(part));
+    if (!card) throw new Error('카드 없음: ' + part);
+    card.querySelector('.menu-btn').click();
+  }, namePart);
+  const clickMenuItem = (label) => page.evaluate((lbl) => {
+    const item = [...document.querySelectorAll('#menu-items .menu-item')].find((b) => b.textContent.includes(lbl));
+    if (!item) throw new Error('메뉴 항목 없음: ' + lbl);
+    item.click();
+  }, label);
+  const modalButtonClick = (label) => page.evaluate((lbl) => {
+    const btn = [...document.querySelectorAll('#modal-buttons .btn')].find((b) => b.textContent === lbl);
+    if (!btn) throw new Error('모달 버튼 없음: ' + lbl);
+    btn.click();
+  }, label);
+
   // 1) 앱 부팅
   await page.goto('http://127.0.0.1:8931/index.html', { waitUntil: 'networkidle0' });
   await page.waitForSelector('#view-home', { timeout: 5000 });
@@ -85,13 +102,14 @@ function check(name, cond, extra) {
   check('하단 중복 버튼 없음', (await page.$('#btn-add')) === null);
   check('상단 추가 버튼 존재', (await page.$('#btn-add-hero')) !== null);
   check('CodePocket 타이틀', (await page.title()).includes('CodePocket'));
+  check('카테고리 칩 UI 제거됨', (await page.$('#chip-row')) === null && (await page.$('#inp-category')) === null);
 
   // 2) 빈 상태 표시
   await page.waitForFunction(() => !document.getElementById('empty-state').classList.contains('hidden'), { timeout: 3000 })
     .then(() => check('빈 상태 안내 표시', true))
     .catch(() => check('빈 상태 안내 표시', false));
 
-  // 3) 코드 추가 (직접 입력 - QR)
+  // 3) 코드 추가 (직접 입력 - QR): 사용자 입력 이름이 그대로 버튼이 되는지
   await page.click('#btn-add-hero');
   await page.waitForSelector('#view-editor.open', { timeout: 3000 });
   check('에디터 열림', true);
@@ -107,7 +125,8 @@ function check(name, cond, extra) {
     .then(() => check('카드에 실제 QR 미리보기 표시', true))
     .catch(() => check('카드에 실제 QR 미리보기 표시', false));
   const cardText = await page.$eval('.code-card', (el) => el.textContent);
-  check('카드에 이름 표시', cardText.includes('우리집 주차장'));
+  check('카드에 입력한 이름 표시', cardText.includes('우리집 주차장'));
+  check('카드에 QR CODE 태그 표시', /QR\s*CODE/.test(cardText), cardText);
 
   // 4) 뷰어: 카드 클릭 -> QR 재생성 캔버스 확인
   await page.click('.code-card');
@@ -129,8 +148,16 @@ function check(name, cond, extra) {
   await page.click('#view-viewer [data-close]');
   await page.waitForFunction(() => !document.getElementById('view-viewer').classList.contains('open'));
 
-  // 5) 즐겨찾기
-  await page.click('.code-card .icon-btn');
+  // 5) ⋮ 메뉴 구성 + 즐겨찾기
+  await openMenuFor('우리집 주차장');
+  const menuTexts = await page.$$eval('#menu-items .menu-item', (els) => els.map((e) => e.textContent));
+  check('메뉴에 이름 수정 있음', menuTexts.some((t) => t.includes('이름 수정')));
+  check('메뉴에 코드 수정 있음', menuTexts.some((t) => t.includes('코드 수정')));
+  check('메뉴에 즐겨찾기 있음', menuTexts.some((t) => t.includes('즐겨찾기')));
+  check('메뉴에 크게 보기 있음', menuTexts.some((t) => t.includes('크게 보기')));
+  check('메뉴에 삭제 있음', menuTexts.some((t) => t.includes('삭제')));
+
+  await clickMenuItem('즐겨찾기');
   await page.waitForFunction(() => document.querySelector('.code-card .name .star') !== null, { timeout: 3000 })
     .then(() => check('즐겨찾기 별 표시', true))
     .catch(() => check('즐겨찾기 별 표시', false));
@@ -143,11 +170,10 @@ function check(name, cond, extra) {
   await page.keyboard.press('Backspace');
   await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 1);
 
-  // 7) 두 번째 코드 (바코드 - EAN) 추가 후 카테고리 필터
+  // 7) 두 번째 코드 (바코드) 추가 + 최근 등록이 맨 위
   await page.click('#btn-add-hero');
   await page.waitForSelector('#view-editor.open');
   await page.type('#inp-name', '헬스장 락커');
-  await page.select('#inp-category', 'gym');
   await page.type('#inp-value', '12345678');
   await page.click('#type-seg button[data-type="barcode"]');
   // 미리보기 갱신 대기
@@ -158,22 +184,57 @@ function check(name, cond, extra) {
   await page.click('#btn-save');
   await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 2, { timeout: 3000 });
   check('두 번째 코드 저장', true);
+  const firstName = await page.$eval('.code-card .name', (el) => el.textContent);
+  check('최근 등록 코드가 목록 맨 위', firstName.includes('헬스장 락커'), firstName);
+  const firstKind = await page.$eval('.code-card .kind', (el) => el.textContent);
+  check('바코드 카드에 BARCODE 태그', /BARCODE/.test(firstKind), firstKind);
 
-  // 카테고리 칩: 헬스장만
-  await page.evaluate(() => {
-    const chips = [...document.querySelectorAll('.chip')];
-    chips.find((c) => c.textContent.includes('헬스장')).click();
-  });
+  // 8) 세 번째 코드 추가 후 이름 검색 ("병원" -> 병원 출입카드만)
+  await page.click('#btn-add-hero');
+  await page.waitForSelector('#view-editor.open');
+  await page.type('#inp-name', '병원 출입카드');
+  await page.type('#inp-value', 'HOSP-2026-0928');
+  await page.click('#btn-save');
+  await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 3, { timeout: 3000 });
+  await page.type('#search-input', '병원');
   await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 1, { timeout: 3000 });
-  check('카테고리 필터(헬스장 1개)', true);
-  await page.evaluate(() => {
-    const chips = [...document.querySelectorAll('.chip')];
-    chips.find((c) => c.textContent.includes('전체')).click();
-  });
-  await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 2);
+  const searched = await page.$eval('.code-card', (el) => el.textContent);
+  check('이름 검색: "병원" -> 병원 출입카드', searched.includes('병원 출입카드'), searched);
+  await page.click('#search-input', { clickCount: 3 });
+  await page.keyboard.press('Backspace');
+  await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 3);
 
-  // 8) 수정 흐름
-  await page.click('.code-card'); // 첫 번째(즐겨찾기=주차장) 카드
+  // 9) 이름 수정: ⋮ → 이름 수정 → 즉시 반영 + 긴 이름 2줄 처리
+  await openMenuFor('병원 출입카드');
+  await clickMenuItem('이름 수정');
+  await page.waitForSelector('#rename-modal:not(.hidden)', { timeout: 3000 });
+  const renameLoaded = await page.$eval('#rename-input', (el) => el.value);
+  check('이름 수정 모달 기존 값 로드', renameLoaded === '병원 출입카드', renameLoaded);
+  await page.$eval('#rename-input', (el) => { el.value = ''; });
+  await page.type('#rename-input', '서울대학교병원 본관 출입 QR');
+  await page.click('#rename-submit');
+  await page.waitForFunction(() => [...document.querySelectorAll('.code-card .name')].some((el) => el.textContent.includes('서울대학교병원 본관 출입 QR')), { timeout: 3000 })
+    .then(() => check('이름 수정 즉시 반영', true))
+    .catch(() => check('이름 수정 즉시 반영', false));
+
+  // 긴 이름이 화면 밖으로 밀려나지 않는지 (2줄 클램프)
+  const overflow = await page.evaluate(() => {
+    const name = [...document.querySelectorAll('.code-card .name')].find((el) => el.textContent.includes('서울대학교병원'));
+    const r = name.getBoundingClientRect();
+    return {
+      within: r.right <= window.innerWidth + 1 && r.width > 0,
+      docOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+      clamped: name.scrollHeight <= name.clientHeight + 2
+    };
+  });
+  check('긴 이름이 화면 안에 완전히 보임', overflow.within);
+  check('문서 가로 스크롤 없음', !overflow.docOverflow);
+
+  // 10) 코드 수정 흐름 (뷰어 → 수정)
+  await page.evaluate(() => {
+    const card = [...document.querySelectorAll('.code-card')].find((c) => c.textContent.includes('우리집 주차장'));
+    card.click();
+  });
   await page.waitForSelector('#view-viewer.open');
   await page.click('#btn-edit');
   await page.waitForSelector('#view-editor.open');
@@ -185,123 +246,65 @@ function check(name, cond, extra) {
   await page.waitForFunction(() => [...document.querySelectorAll('.code-card')].some((c) => c.textContent.includes('회사 주차장')), { timeout: 3000 });
   check('수정 저장 반영', true);
 
-  // 9) 삭제 흐름 (길게 누르기 대신 DB 직접 삭제로 로직 검증)
-  const delResult = await page.evaluate(async () => {
-    const codes = await window.CodePocket.DB.listCodes();
-    const target = codes.find((c) => c.name === '헬스장 락커');
-    await window.CodePocket.DB.deleteCode(target.id);
-    return (await window.CodePocket.DB.listCodes()).length;
-  });
-  check('삭제 후 1개 남음', delResult === 1);
+  // 11) 삭제 흐름: ⋮ → 삭제 → 확인창("삭제하시겠습니까?") → 삭제
+  await openMenuFor('헬스장 락커');
+  await clickMenuItem('삭제');
+  await page.waitForFunction(() => !document.getElementById('modal').classList.contains('hidden'), { timeout: 3000 });
+  const confirmMsg = await page.$eval('#modal-msg', (el) => el.textContent);
+  check('삭제 확인창에 코드 이름 표시', confirmMsg.includes('헬스장 락커') && confirmMsg.includes('삭제하시겠습니까'), confirmMsg);
+  await modalButtonClick('취소');
+  await page.waitForFunction(() => document.getElementById('modal').classList.contains('hidden'));
+  check('취소 시 삭제 안 됨', (await page.$$eval('.code-card', (els) => els.length)) === 3);
+  await openMenuFor('헬스장 락커');
+  await clickMenuItem('삭제');
+  await page.waitForFunction(() => !document.getElementById('modal').classList.contains('hidden'), { timeout: 3000 });
+  await modalButtonClick('삭제');
+  await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 2, { timeout: 3000 });
+  const remainTexts = await page.$$eval('.code-card', (els) => els.map((e) => e.textContent));
+  check('해당 코드만 삭제됨', !remainTexts.some((t) => t.includes('헬스장 락커')) && remainTexts.some((t) => t.includes('회사 주차장')));
 
-  // 10) 내보내기 JSON 구조 검증
+  // 12) 내보내기 JSON 구조 검증
   const exported = await page.evaluate(async () => {
     const json = await window.CodePocket.DB.exportJson();
     return json;
   });
-  check('내보내기 구조', exported.app === 'CodePocket' && Array.isArray(exported.codes) && exported.codes.length === 1);
+  check('내보내기 구조', exported.app === 'CodePocket' && Array.isArray(exported.codes) && exported.codes.length === 2);
 
-  // 11) 가져오기 (병합)
+  // 13) 가져오기 (병합) - 기존 데이터 유지 확인
   const importCount = await page.evaluate(async () => {
     const payload = {
       app: 'CodePocket', schema: 1,
-      codes: [{ id: 'imported_1', name: '병원 접수증', value: 'HOSP-2026-0928', type: 'qr', category: 'hospital' }]
+      codes: [{ id: 'imported_1', name: '병원 접수증', value: 'HOSP-2026-0928-2', type: 'qr' }]
     };
     return window.CodePocket.DB.importJson(payload);
   });
   check('가져오기 1개', importCount === 1);
   await page.evaluate(() => window.CodePocket.UI.reload());
-  await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 2);
+  await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 3);
 
-  // 12) 새로고침 후 데이터 유지 (IndexedDB 영속성)
+  // 14) 새로고침 후 데이터 유지 (IndexedDB 영속성)
   await page.reload({ waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelectorAll('.code-card').length >= 1, { timeout: 5000 });
   const afterReload = await page.$$eval('.code-card', (els) => els.length);
-  check('새로고침 후 데이터 유지', afterReload === 2, `실제: ${afterReload}`);
+  check('새로고침 후 데이터 유지', afterReload === 3, `실제: ${afterReload}`);
 
-  // 12b) 가져온 병원 접수증 삭제 (13번 자동 이름 테스트를 위해 상태 정리)
+  // 14b) 가져온 병원 접수증 삭제 (자동 이름 테스트를 위해 상태 정리)
   await page.evaluate(async () => {
     const codes = await window.CodePocket.DB.listCodes();
     const target = codes.find((c) => c.name === '병원 접수증');
     if (target) await window.CodePocket.DB.deleteCode(target.id);
   });
   await page.evaluate(() => window.CodePocket.UI.reload());
-  await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 1, { timeout: 3000 });
+  await page.waitForFunction(() => document.querySelectorAll('.code-card').length === 2, { timeout: 3000 });
 
-  // 13) 이름 없이 저장 -> 자동 이름 생성 (카테고리 병원 지정)
-  // 저장 버튼은 스티커 액션바로 항상 보이므로 스크롤 없이 클릭 가능
+  // 15) 이름 없이 저장 -> 자동 이름 생성 (예: "QR 코드")
   await page.click('#btn-add-hero');
   await page.waitForSelector('#view-editor.open');
   await page.type('#inp-value', 'PARKING-C1-777');
-  await page.select('#inp-category', 'hospital');
   await page.click('#btn-save');
-  await page.waitForFunction(() => [...document.querySelectorAll('.code-card .name')].some((el) => /병원 QR( 2)?$/.test(el.textContent.trim())), { timeout: 3000 })
+  await page.waitForFunction(() => [...document.querySelectorAll('.code-card .name')].some((el) => /QR 코드( 2)?$/.test(el.textContent.trim())), { timeout: 3000 })
     .then(() => check('이름 없이 저장: 자동 이름 생성', true))
     .catch(() => check('이름 없이 저장: 자동 이름 생성', false));
-
-  // 14) 카테고리 순서 편집: 기타를 맨 위로
-  await page.click('#chip-order-btn');
-  await page.waitForFunction(() => document.getElementById('chip-row').classList.contains('editing'));
-  // "기타" 칩의 ▲를 (기타가 마지막이므로) 4번 눌러 맨 위로
-  await page.evaluate(() => {
-    const chips = [...document.querySelectorAll('.chip')];
-    const other = chips.find((c) => c.textContent.includes('기타'));
-    const up = other.querySelector('.order-btns button');
-    for (let i = 0; i < 5; i++) up.click();
-  });
-  await page.click('#chip-order-btn'); // 편집 완료
-  // '전체' 칩은 항상 첫 번째(고정), 그 다음 칩이 이동된 '기타'여야 함
-  const firstTwoChips = await page.$$eval('.chip', (els) => els.slice(0, 2).map((el) => el.textContent));
-  check('카테고리 순서 이동: 전체 다음 기타가 맨 위', firstTwoChips[0].includes('전체') && firstTwoChips[1].includes('기타'), firstTwoChips.join(' | '));
-
-  // 14b) 사용자 정의 카테고리 추가/삭제 (입력란 + 아이콘 선택)
-  await page.evaluate(() => document.getElementById('chip-row').querySelector('.chip-add').click());
-  await page.waitForSelector('#cat-modal:not(.hidden)', { timeout: 3000 });
-  check('카테고리 추가 모달 열림', true);
-  await page.type('#cat-label-input', '학원');
-  // 아이콘 6번째(🎓) 선택
-  await page.evaluate(() => document.querySelectorAll('#cat-emoji-row .emoji-opt')[5].click());
-  await page.click('#cat-submit');
-  await page.waitForFunction(() => document.getElementById('cat-modal').classList.contains('hidden'), { timeout: 3000 });
-  await page.waitForFunction(() => [...document.querySelectorAll('.chip')].some((c) => c.textContent.includes('학원')), { timeout: 3000 })
-    .then(() => check('사용자 정의 카테고리(학원) 칩 추가', true))
-    .catch(() => check('사용자 정의 카테고리(학원) 칩 추가', false));
-
-  // 에디터 셀렉트에도 반영되는지
-  await page.click('#btn-add-hero');
-  await page.waitForSelector('#view-editor.open');
-  const catOpts = await page.$eval('#inp-category', (el) => [...el.options].map((o) => o.value));
-  check('에디터 카테고리 셀렉트에 사용자 정의 반영', catOpts.some((v) => v.startsWith('u_')));
-  await page.click('#view-editor [data-close]');
-
-  // 편집 모드에서 ✕ 삭제
-  await page.click('#chip-order-btn');
-  await page.waitForFunction(() => document.getElementById('chip-row').classList.contains('editing'));
-  await page.evaluate(() => {
-    const chips = [...document.querySelectorAll('.chip')];
-    const target = chips.find((c) => c.textContent.includes('학원'));
-    target.querySelector('.chip-del').click();
-  });
-  await page.waitForFunction(() => [...document.querySelectorAll('#modal-buttons .btn')].some((b) => b.textContent === '삭제'), { timeout: 3000 });
-  await page.evaluate(() => {
-    const del = [...document.querySelectorAll('#modal-buttons .btn')].find((b) => b.textContent === '삭제');
-    del.click();
-  });
-  await page.waitForFunction(() => ![...document.querySelectorAll('.chip')].some((c) => c.textContent.includes('학원')), { timeout: 3000 })
-    .then(() => check('사용자 정의 카테고리 삭제', true))
-    .catch(() => check('사용자 정의 카테고리 삭제', false));
-  await page.click('#chip-order-btn'); // 편집 모드 종료
-
-  // 15) 모바일 뷰포트에서 가로 넘침 없음 확인 (기타 글자 잘림 문제 재발 방지)
-  const overflow = await page.evaluate(() => {
-    const chips = [...document.querySelectorAll('.chip')];
-    const other = chips.find((c) => c.textContent.includes('기타'));
-    const r = other.getBoundingClientRect();
-    const visible = r.right <= window.innerWidth && r.width > 0;
-    return { visible, docOverflow: document.documentElement.scrollWidth > window.innerWidth + 1 };
-  });
-  check('기타 칩 화면 안에 완전히 보임', overflow.visible);
-  check('문서 가로 스크롤 없음', !overflow.docOverflow);
 
   // 16) 콘솔/페이지 오류 수집 (리소스 404 등 제외, 심각 오류만 판정)
   const serious = pageErrors.filter((e) => !/ResizeObserver/.test(e));

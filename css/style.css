@@ -383,114 +383,6 @@ input, textarea, select {
 }
 .search-box .search-icon { color: var(--ink-400); font-size: 16px; }
 
-/* 카테고리 칩 (줄바꿈: 화면을 벗어나지 않음) */
-.chip-wrap {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 12px auto 4px;
-  padding: 0 16px;
-  max-width: 560px;
-  width: 100%;
-}
-.chip-row {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 4px 2px 8px;
-}
-.chip-order-btn {
-  flex: none;
-  width: 44px;
-  min-height: 40px;
-  border-radius: 12px;
-  border: 1.5px solid var(--btn-line);
-  background: var(--btn-face);
-  color: var(--ink-600);
-  font-size: 15px;
-  font-weight: 700;
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
-    0 2.5px 0 var(--btn-edge);
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
-}
-.chip-order-btn:active { transform: translateY(2px); box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.9), 0 0 0 var(--btn-edge); }
-.chip-order-btn.active {
-  background: linear-gradient(180deg, #ef4444, var(--red-600) 55%, var(--red-700));
-  border-color: var(--red-edge);
-  color: #fff;
-  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.35), 0 2.5px 0 var(--red-edge);
-}
-.chip {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  border-radius: 999px;
-  border: 1.5px solid var(--btn-line);
-  background: var(--btn-face);
-  color: var(--ink-600);
-  font-size: 14.5px;
-  font-weight: 600;
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
-    0 2.5px 0 var(--btn-edge);
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
-}
-.chip:active { transform: translateY(2px); box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.9), 0 0 0 var(--btn-edge); }
-/* 활성 칩: 로열 블루 + 골드 링 (선택 상태가 또렷하게) */
-.chip.active {
-  background: linear-gradient(180deg, #2f6fd6, var(--blue-600) 55%, var(--blue-700));
-  border-color: var(--blue-800);
-  color: #fff;
-  box-shadow:
-    inset 0 1.5px 0 rgba(255,255,255,0.35),
-    0 0 0 2px rgba(232, 182, 76, 0.55),
-    0 2.5px 0 var(--blue-900),
-    0 5px 10px rgba(17, 68, 138, 0.35);
-}
-/* "＋ 추가" 칩: 레드 계열로 통일 */
-.chip-add {
-  border: 1.5px dashed var(--red-500);
-  background: var(--red-50);
-  color: var(--red-600);
-  font-weight: 700;
-  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.8), 0 2.5px 0 #eec3c3;
-}
-/* 사용자 정의 카테고리 삭제(✕) 버튼 */
-.chip .chip-del {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--red-100);
-  color: var(--red-700);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-}
-/* 순서 편집 모드 */
-.chip .order-btns { display: none; gap: 3px; margin-left: 2px; }
-.chip-row.editing .chip { border-style: dashed; }
-.chip-row.editing .chip .order-btns { display: inline-flex; }
-.order-btns button {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid var(--btn-line);
-  background: #fff;
-  color: var(--ink-600);
-  font-size: 13px;
-  line-height: 1;
-  padding: 0;
-}
-.order-btns button:active { background: var(--blue-100); }
-
 /* 코드 카드 목록 (프리미엄 화이트 카드: 이중 보더 + 광택 + 레드 좌측 액센트) */
 .code-list {
   display: flex;
@@ -505,9 +397,9 @@ input, textarea, select {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   border-radius: var(--radius);
   background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
   border: 1.5px solid var(--btn-line);
@@ -571,26 +463,31 @@ input, textarea, select {
   color: var(--blue-500);
 }
 .code-card .info { flex: 1; min-width: 0; }
+/* 이름: 최대 2줄 줄바꿈 (긴 이름도 화면 밖으로 밀려나지 않음) */
 .code-card .name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 18.5px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-size: 17.5px;
+  line-height: 1.32;
   font-weight: 800;
   color: var(--ink-900);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .code-card .name .star { color: var(--star); font-size: 15px; flex: none; }
-.code-card .meta {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--ink-400);
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
+/* 코드 종류 태그: 이름 아래 작은 글씨 (QR CODE / BARCODE) */
+.code-card .kind {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--blue-100);
+  color: var(--blue-700);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
 }
 .badge {
   padding: 3px 9px;
@@ -600,15 +497,24 @@ input, textarea, select {
   font-size: 12px;
   font-weight: 700;
 }
-.badge.b-manual { background: #f0f1f4; color: var(--ink-600); }
 
-/* 목록 즐겨찾기 버튼 (흰색 입체 소형) */
-.code-card .icon-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  font-size: 17px;
+/* 카드 ⋮ 옵션 버튼 */
+.code-card .menu-btn {
+  flex: none;
+  align-self: center;
+  width: 34px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--ink-400);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
 }
+.code-card .menu-btn:active { background: var(--blue-100); color: var(--blue-700); }
 
 /* 저장 직후 하이라이트가 붙는 카드 외곽 골드 링 유지용 */
 .code-card.just-saved::after {
@@ -756,13 +662,13 @@ input, textarea, select {
   box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.95), 0 1px 4px rgba(10,44,91,0.22);
 }
 
-/* 미리보기 */
+/* 미리보기 (고정 높이: 미리보기 생성/해제 시 아래 필드가 밀려 탭이 빗나가지 않게 함) */
 .preview-box {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 210px;
+  height: 230px;
   border: 2px dashed var(--blue-300);
   border-radius: var(--radius);
   background:
@@ -771,7 +677,7 @@ input, textarea, select {
   overflow: hidden;
   box-shadow: inset 0 2px 6px rgba(10, 44, 91, 0.06);
 }
-.preview-box canvas { max-width: 100%; }
+.preview-box canvas { max-width: 100%; max-height: 100%; }
 .preview-empty { color: var(--ink-400); font-size: 13.5px; padding: 20px; text-align: center; line-height: 1.5; }
 
 .photo-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
@@ -895,7 +801,7 @@ input, textarea, select {
   object-fit: contain;
 }
 
-/* ---------- 카테고리 추가 모달 ---------- */
+/* ---------- 카테고리 추가 모달 (이름 수정 모달 공용) ---------- */
 .cat-field input {
   width: 100%;
   padding: 14px;
@@ -907,34 +813,62 @@ input, textarea, select {
   outline: none;
 }
 .cat-field input:focus { border-color: var(--blue-500); }
-.emoji-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.emoji-opt {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 1.5px solid var(--btn-line);
-  background: var(--btn-face);
-  font-size: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.95), 0 2px 0 var(--btn-edge);
-}
-.emoji-opt.selected {
-  border-color: var(--blue-500);
-  background: var(--blue-100);
-  box-shadow: 0 0 0 2px var(--blue-100);
-}
 .cat-modal-buttons {
   display: flex;
   gap: 10px;
   margin-top: 6px;
 }
 .cat-modal-buttons .btn { flex: 1; min-height: 50px; }
+
+/* ---------- 카드 ⋮ 옵션 메뉴 ---------- */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(7, 18, 40, 0.35);
+  backdrop-filter: blur(2px);
+}
+.menu-sheet {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 56;
+  width: min(92vw, 400px);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  border: 1.5px solid var(--btn-line);
+  border-top: 3px solid var(--gold);
+  box-shadow: 0 -8px 36px rgba(7, 18, 40, 0.32);
+  padding: 6px 10px 8px;
+  animation: sheet-up 0.2s ease;
+}
+.menu-title {
+  padding: 10px 8px 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-600);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.menu-items { display: flex; flex-direction: column; }
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 10px;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink-900);
+  font-size: 15.5px;
+  font-weight: 700;
+  text-align: left;
+}
+.menu-item:active { background: var(--blue-100); }
+.menu-item .mi-icon { font-size: 18px; width: 24px; text-align: center; flex: none; }
+.menu-item.danger { color: var(--danger); }
+.menu-item.danger:active { background: var(--red-50); }
 
 /* ---------- 모달 / 시트 ---------- */
 .modal-backdrop {

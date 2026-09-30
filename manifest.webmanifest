@@ -1,7 +1,7 @@
 {
   "name": "CodePocket - 내 QR·바코드 보관함",
   "short_name": "CodePocket",
-  "description": "병원, 사무실, 주차장, 헬스장의 QR코드와 바코드를 휴대폰에 저장하고 필요할 때 바로 크게 보여주는 오프라인 앱",
+  "description": "사용자가 직접 이름을 붙여 저장하는 개인 QR·바코드 보관함. 필요할 때 바로 크게 보여주는 오프라인 앱",
   "lang": "ko",
   "dir": "ltr",
   "start_url": "./index.html",

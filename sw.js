@@ -8,7 +8,7 @@
 'use strict';
 
 /* 배포 시 디자인/구조 변경마다 VERSION 숫자를 올려 캐시를 강제 갱신 */
-const CACHE_NAME = 'codepocket-v4';
+const CACHE_NAME = 'codepocket-v5';
 
 const PRECACHE_URLS = [
   './',

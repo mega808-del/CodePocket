@@ -1,4 +1,4 @@
-/* CodePocket UI: 화면 전환, 목록/칩 렌더, 에디터·카메라·뷰어 흐름, 내보내기/가져오기 */
+/* CodePocket UI: 화면 전환, 목록 렌더, 에디터·카메라·뷰어 흐름, ⋮ 메뉴, 내보내기/가져오기 */
 'use strict';
 
 (function () {
@@ -7,14 +7,12 @@
 
   const state = {
     codes: [],
-    filterCategory: 'all',
     search: '',
     editingId: null,        // 수정 중인 코드 id
     scannedValue: null,     // 자동 인식 결과
     scannedFormat: '',
     currentViewId: null,    // 뷰어에 열려 있는 코드
-    viewerBright: false,
-    orderEditMode: false    // 카테고리 순서 편집 모드
+    viewerBright: false
   };
 
   // ---------- 화면 전환 ----------
@@ -41,178 +39,20 @@
   function visibleCodes() {
     const q = state.search.trim().toLowerCase();
     return state.codes
-      .filter((c) => state.filterCategory === 'all' || c.category === state.filterCategory)
       .filter((c) => {
         if (!q) return true;
         return (c.name || '').toLowerCase().includes(q) ||
                (c.memo || '').toLowerCase().includes(q) ||
                (c.value || '').toLowerCase().includes(q);
       })
-      .sort((a, b) => {
-        if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
-        return b.createdAt - a.createdAt;
-      });
+      .sort((a, b) => b.createdAt - a.createdAt); // 기본 정렬: 최근 등록순 (새 코드가 맨 위)
   }
 
-  function renderChips() {
-    const row = document.getElementById('chip-row');
-    if (!row) return;
-    row.innerHTML = '';
-    row.classList.toggle('editing', !!state.orderEditMode);
-
-    for (const cat of CP.getOrderedCategories()) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'chip' + (state.filterCategory === cat.id ? ' active' : '');
-
-      const label = document.createElement('span');
-      label.textContent = `${cat.emoji} ${cat.label}`;
-      b.appendChild(label);
-
-      // 사용자 정의 카테고리: 편집 모드에서 ✕(삭제) 표시
-      const deletable = state.orderEditMode && cat.id.startsWith('u_');
-      if (deletable) {
-        const del = document.createElement('span');
-        del.className = 'chip-del';
-        del.textContent = '✕';
-        del.setAttribute('aria-label', `${cat.label} 카테고리 삭제`);
-        on(del, 'click', (e) => {
-          e.stopPropagation();
-          confirmDeleteCategory(cat);
-        });
-        on(del, 'pointerdown', (e) => e.stopPropagation());
-        b.appendChild(del);
-      }
-
-      on(b, 'click', () => {
-        state.filterCategory = cat.id;
-        CP.bumpCategoryCount(cat.id);
-        renderChips();
-        renderList();
-      });
-
-      if (state.orderEditMode) {
-        // 편집 모드: ▲▼로 순서 이동 (클릭해도 필터 변경 안 함)
-        const btns = document.createElement('span');
-        btns.className = 'order-btns';
-        const up = document.createElement('button');
-        up.type = 'button';
-        up.textContent = '▲';
-        up.setAttribute('aria-label', `${cat.label} 위로`);
-        const down = document.createElement('button');
-        down.type = 'button';
-        down.textContent = '▼';
-        down.setAttribute('aria-label', `${cat.label} 아래로`);
-        on(up, 'click', (e) => {
-          e.stopPropagation();
-          CP.moveCategory(cat.id, -1);
-          renderChips();
-        });
-        on(down, 'click', (e) => {
-          e.stopPropagation();
-          CP.moveCategory(cat.id, 1);
-          renderChips();
-        });
-        btns.appendChild(up);
-        btns.appendChild(down);
-        b.appendChild(btns);
-        on(b, 'pointerdown', (e) => e.stopPropagation());
-      }
-      row.appendChild(b);
-    }
-
-    // 맨 뒤에 "＋" 칩: 카테고리 추가 입력란 열기
-    const addChip = document.createElement('button');
-    addChip.type = 'button';
-    addChip.className = 'chip chip-add';
-    addChip.textContent = '＋ 추가';
-    addChip.setAttribute('aria-label', '카테고리 추가');
-    on(addChip, 'click', openCategoryModal);
-    row.appendChild(addChip);
-  }
-
-  // ---------- 카테고리 추가 모달 ----------
-  const CAT_EMOJIS = ['🏥', '🏢', '🚗', '💪', '📦', '🎓', '🏪', '✈️', '🏦', '🍽️', '🐕', '🏠', '⚽', '🎮', '💊', '🏷️'];
-
-  function openCategoryModal() {
-    const modal = document.getElementById('cat-modal');
-    const input = document.getElementById('cat-label-input');
-    const row = document.getElementById('cat-emoji-row');
-    if (!modal || !input || !row) return;
-    input.value = '';
-    row.innerHTML = '';
-    CAT_EMOJIS.forEach((em, i) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'emoji-opt' + (i === 0 ? ' selected' : '');
-      btn.textContent = em;
-      btn.dataset.emoji = em;
-      on(btn, 'click', () => {
-        row.querySelectorAll('.emoji-opt').forEach((x) => x.classList.remove('selected'));
-        btn.classList.add('selected');
-      });
-      row.appendChild(btn);
-    });
-    modal.classList.remove('hidden');
-    setTimeout(() => input.focus(), 60);
-  }
-
-  function closeCategoryModal() {
-    const modal = document.getElementById('cat-modal');
-    modal && modal.classList.add('hidden');
-  }
-
-  function submitCategoryModal() {
-    const input = document.getElementById('cat-label-input');
-    const emojiBtn = document.querySelector('#cat-emoji-row .emoji-opt.selected');
-    const label = input ? input.value.trim() : '';
-    if (!label) {
-      toast('카테고리 이름을 입력해 주세요.');
-      input && input.focus();
-      return;
-    }
-    const added = CP.addCustomCategory(label, emojiBtn ? emojiBtn.dataset.emoji : '🏷️');
-    if (!added) {
-      toast('이미 있는 이름이에요. 다른 이름을 입력해 주세요.');
-      return;
-    }
-    closeCategoryModal();
-    refreshCategorySelect();
-    renderChips();
-    toast(`'${added.label}' 카테고리를 추가했습니다.`);
-  }
-
-  function confirmDeleteCategory(cat) {
-    const count = state.codes.filter((c) => c.category === cat.id).length;
-    CP.confirmModal(
-      '카테고리 삭제',
-      count > 0
-        ? `'${cat.label}' 카테고리를 삭제할까요?\n이 카테고리의 코드 ${count}개는 '기타'로 이동합니다.`
-        : `'${cat.label}' 카테고리를 삭제할까요?`,
-      async () => {
-        CP.removeCustomCategory(cat.id);
-        // 이 카테고리의 코드를 '기타'로 이동
-        for (const c of state.codes.filter((x) => x.category === cat.id)) {
-          try { await CP.DB.updateCode(c.id, { category: 'other' }); } catch (_) { /* 무시 */ }
-        }
-        if (state.filterCategory === cat.id) state.filterCategory = 'all';
-        await reload();
-        renderChips();
-        refreshCategorySelect();
-        toast('카테고리를 삭제했습니다.');
-      },
-      '삭제'
-    );
-  }
-
-  function toggleOrderEditMode() {
-    state.orderEditMode = !state.orderEditMode;
-    const btn = document.getElementById('chip-order-btn');
-    if (btn) btn.classList.toggle('active', state.orderEditMode);
-    renderChips();
-    toast(state.orderEditMode
-      ? '순서 편집: ▲▼로 이동 후 완료 시 버튼을 다시 누르세요.'
-      : '순서가 저장되었습니다.');
+  // 카드 종류 표시: "QR CODE" / "BARCODE"
+  function typeTag(c) {
+    if (c.type === 'barcode') return 'BARCODE';
+    // 2D 코드(QR 외 Data Matrix/Aztec 등)도 관습적으로 QR CODE로 표기
+    return 'QR CODE';
   }
 
   function renderList() {
@@ -229,9 +69,6 @@
       card.className = 'code-card';
       card.dataset.id = c.id;
 
-      const cat = CP.catById(c.category);
-      const typeLabel = c.type === 'barcode' ? CP.fmtLabel(c.format) || '바코드' : 'QR 코드';
-
       // 실제 QR/바코드 미리보기 (비동기 생성, 실패 시 유형 글자 표시)
       const thumb = document.createElement('span');
       thumb.className = 'thumb';
@@ -245,28 +82,134 @@
       info.className = 'info';
       info.innerHTML =
         `<span class="name">${CP.escapeHtml(c.name)}${c.favorite ? ' <span class="star">★</span>' : ''}</span>` +
-        `<span class="meta"><span class="badge">${cat.emoji} ${cat.label}</span>` +
-        `<span>${CP.escapeHtml(typeLabel)}</span><span>${CP.fmtDate(c.createdAt)}</span></span>`;
+        `<span class="kind">${typeTag(c)}</span>`;
 
-      // 즐겨찾기 토글 버튼 (카드 우상단 영역에 메타로 대체 가능하나 명확성 위해 별도 버튼)
-      const starBtn = document.createElement('span');
-      starBtn.className = 'icon-btn';
-      starBtn.style.background = 'transparent';
-      starBtn.textContent = c.favorite ? '★' : '☆';
-      starBtn.style.color = c.favorite ? 'var(--star)' : 'var(--ink-400)';
-      on(starBtn, 'click', (e) => {
+      // ⋮ 옵션 메뉴 버튼
+      const menuBtn = document.createElement('span');
+      menuBtn.className = 'menu-btn';
+      menuBtn.setAttribute('role', 'button');
+      menuBtn.setAttribute('aria-label', `${c.name} 옵션 메뉴`);
+      menuBtn.setAttribute('aria-haspopup', 'menu');
+      menuBtn.textContent = '⋮';
+      on(menuBtn, 'click', (e) => {
         e.stopPropagation();
-        toggleFavorite(c);
+        openCardMenu(c);
       });
       // 카드(=button) 안의 span 클릭이 카드 클릭으로 전파되지 않게 처리
-      on(starBtn, 'pointerdown', (e) => e.stopPropagation());
+      on(menuBtn, 'pointerdown', (e) => e.stopPropagation());
 
       card.appendChild(thumb);
       card.appendChild(info);
-      card.appendChild(starBtn);
+      card.appendChild(menuBtn);
       on(card, 'click', () => openViewer(c.id));
       list.appendChild(card);
     }
+  }
+
+  // ---------- 카드 ⋮ 메뉴 ----------
+  function closeCardMenu() {
+    const sheet = document.getElementById('menu-sheet');
+    const backdrop = document.getElementById('menu-backdrop');
+    if (sheet) sheet.classList.add('hidden');
+    if (backdrop) backdrop.classList.add('hidden');
+  }
+
+  function openCardMenu(c) {
+    const sheet = document.getElementById('menu-sheet');
+    const backdrop = document.getElementById('menu-backdrop');
+    const title = document.getElementById('menu-title');
+    if (!sheet || !backdrop) return;
+
+    if (title) title.textContent = c.name || '이름 없는 코드';
+
+    const items = [
+      { icon: '✏️', label: '이름 수정', fn: () => openRenameModal(c) },
+      { icon: '🔧', label: '코드 수정', fn: async () => {
+          const code = await safeGetCode(c.id);
+          if (code) openEditor(code);
+        } },
+      { icon: c.favorite ? '☆' : '★', label: c.favorite ? '즐겨찾기 해제' : '즐겨찾기', fn: () => toggleFavorite(c) },
+      { icon: '🔍', label: '크게 보기', fn: () => openViewer(c.id) },
+      { icon: '🗑️', label: '삭제', danger: true, fn: () => confirmDeleteCode(c) }
+    ];
+
+    const box = document.getElementById('menu-items');
+    box.innerHTML = '';
+    for (const it of items) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'menu-item' + (it.danger ? ' danger' : '');
+      b.innerHTML = `<span class="mi-icon">${it.icon}</span><span>${CP.escapeHtml(it.label)}</span>`;
+      on(b, 'click', () => {
+        closeCardMenu();
+        it.fn();
+      });
+      box.appendChild(b);
+    }
+
+    backdrop.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+  }
+
+  async function safeGetCode(id) {
+    try {
+      return await CP.DB.getCode(id);
+    } catch (_) {
+      toast('항목을 불러오지 못했습니다.');
+      return null;
+    }
+  }
+
+  // ---------- 이름 수정 모달 ----------
+  function openRenameModal(c) {
+    const modal = document.getElementById('rename-modal');
+    const input = document.getElementById('rename-input');
+    if (!modal || !input) return;
+    input.value = c.name || '';
+    modal.classList.remove('hidden');
+    modal.dataset.id = c.id;
+    setTimeout(() => { input.focus(); input.select(); }, 60);
+  }
+
+  function closeRenameModal() {
+    const modal = document.getElementById('rename-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async function submitRename() {
+    const modal = document.getElementById('rename-modal');
+    const input = document.getElementById('rename-input');
+    if (!modal || !input) return;
+    const id = modal.dataset.id;
+    const name = input.value.trim();
+    if (!name) { toast('이름을 입력해 주세요.'); input.focus(); return; }
+    try {
+      await CP.DB.updateCode(id, { name });
+      closeRenameModal();
+      await reload();
+      flashCard(id);
+      toast('이름을 수정했습니다.');
+    } catch (_) {
+      toast('이름 수정에 실패했습니다.');
+    }
+  }
+
+  // ---------- 삭제 ----------
+  function confirmDeleteCode(c) {
+    CP.confirmModal(
+      '코드 삭제',
+      `'${c.name || '이름 없는 코드'}'를 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.`,
+      async () => {
+        try {
+          await CP.DB.deleteCode(c.id);
+          await reload();
+          toast('삭제했습니다.');
+        } catch (_) {
+          toast('삭제에 실패했습니다.');
+        }
+      },
+      '삭제'
+    );
   }
 
   async function reload() {
@@ -324,29 +267,6 @@
   }
 
   // ---------- 에디터 ----------
-  // 카테고리 셀렉트를 현재 표시 순서로 재구성
-  function refreshCategorySelect(preferId) {
-    const sel = $('#inp-category');
-    if (!sel) return;
-    const current = preferId || sel.value;
-    sel.innerHTML = '';
-    for (const cat of CP.getOrderedCategories()) {
-      const opt = document.createElement('option');
-      opt.value = cat.id;
-      opt.textContent = `${cat.emoji} ${cat.label}`;
-      sel.appendChild(opt);
-    }
-    if (current) sel.value = current;
-  }
-
-  // 가장 최근에 선택한 카테고리 (신규 저장 시 기본값)
-  function lastUsedCategory() {
-    try { return localStorage.getItem('cp_last_category'); } catch (_) { return 'other'; }
-  }
-  function setLastUsedCategory(id) {
-    try { localStorage.setItem('cp_last_category', id); } catch (_) { /* 무시 */ }
-  }
-
   function resetEditor() {
     state.editingId = null;
     state.scannedValue = null;
@@ -354,7 +274,6 @@
     $('#inp-value').value = '';
     $('#inp-name').value = '';
     $('#inp-memo').value = '';
-    refreshCategorySelect(lastUsedCategory() || 'other');
     document.getElementById('scan-badge').classList.add('hidden');
     setTypeSeg('qr');
     clearPreview();
@@ -398,9 +317,8 @@
       state.editingId = code.id;
       $('#editor-title').textContent = '코드 수정';
       $('#inp-value').value = code.value;
-      $('#inp-name').value = code.name;
+      $('#inp-name').value = code.name || '';
       $('#inp-memo').value = code.memo || '';
-      $('#inp-category').value = code.category;
       setTypeSeg(code.type);
       state.scannedValue = code.value;
       state.scannedFormat = code.format || '';
@@ -412,12 +330,11 @@
     openSubview('view-editor');
   }
 
-  // 이름 미입력 시 카테고리+유형으로 자동 이름 생성 (예: "병원 QR", "주차장 바코드 2")
-  function autoName(category, type) {
-    const cat = CP.catById(category);
-    const base = `${cat.label} ${type === 'barcode' ? '바코드' : 'QR'}`;
-    const sameCat = state.codes.filter((c) => (c.name || '').startsWith(base)).length;
-    return sameCat > 0 ? `${base} ${sameCat + 1}` : base;
+  // 이름 미입력 시 유형으로 자동 이름 생성 (예: "QR 코드", "바코드 2")
+  function autoName(type) {
+    const base = type === 'barcode' ? '바코드' : 'QR 코드';
+    const sameType = state.codes.filter((c) => (c.name || '').startsWith(base)).length;
+    return sameType > 0 ? `${base} ${sameType + 1}` : base;
   }
 
   async function saveFromEditor() {
@@ -425,15 +342,12 @@
     // 클릭이 성공한 시점이므로 이후 로직은 안전하게 진행된다.
     const value = $('#inp-value').value.trim();
     if (!value) { toast('코드 내용을 입력하거나 스캔해 주세요.'); return; }
-    const category = $('#inp-category').value;
-    const name = $('#inp-name').value.trim() || autoName(category, currentType());
-    setLastUsedCategory(category);
+    const name = $('#inp-name').value.trim() || autoName(currentType());
 
     const data = {
       value,
       name,
       memo: $('#inp-memo').value.trim(),
-      category,
       type: currentType(),
       format: state.scannedFormat,
       photoDataUrl: state.editingId ? undefined : (editorPhotoDataUrl || null)
@@ -472,7 +386,7 @@
     $('#inp-value').value = result.text;
     document.getElementById('scan-badge').classList.remove('hidden');
     if (!state.editingId && !$('#inp-name').value.trim()) {
-      // 이름 자동 제안: 카테고리 기본값 유지, 이름은 사용자가 입력하도록 포커스
+      // 이름은 사용자가 직접 입력하도록 비워 둔다 (포커스는 openSubview 후 에디터에서)
     }
     await refreshPreview();
     toast('코드를 인식했습니다!');
@@ -594,13 +508,7 @@
 
   // ---------- 뷰어 ----------
   async function openViewer(id) {
-    let code;
-    try {
-      code = await CP.DB.getCode(id);
-    } catch (_) {
-      toast('항목을 불러오지 못했습니다.');
-      return;
-    }
+    const code = await safeGetCode(id);
     if (!code) { toast('항목을 찾을 수 없습니다.'); await reload(); return; }
     state.currentViewId = id;
 
@@ -612,9 +520,8 @@
 
     $('#viewer-name-text').textContent = code.name;
     document.getElementById('viewer-star').classList.toggle('hidden', !code.favorite);
-    const cat = CP.catById(code.category);
     const typeLabel = code.type === 'barcode' ? (CP.fmtLabel(code.format) || '바코드') : 'QR 코드';
-    $('#viewer-meta').textContent = `${cat.emoji} ${cat.label} · ${typeLabel} · ${CP.fmtDate(code.createdAt)}`;
+    $('#viewer-meta').textContent = `${typeLabel} · ${CP.fmtDate(code.createdAt)}`;
     $('#viewer-value').textContent = code.value;
 
     const photo = document.getElementById('viewer-photo');
@@ -635,21 +542,6 @@
     if (!btn) return;
     btn.classList.toggle('active', state.viewerBright);
     btn.textContent = state.viewerBright ? '☀️ 밝기 끄기' : '☀️ 밝기 최대';
-  }
-
-  async function deleteCurrent() {
-    const id = state.currentViewId;
-    if (!id) return;
-    CP.confirmModal('코드 삭제', '이 코드를 삭제할까요?\n삭제하면 복구할 수 없습니다.', async () => {
-      try {
-        await CP.DB.deleteCode(id);
-        closeSubview('view-viewer');
-        await reload();
-        toast('삭제했습니다.');
-      } catch (_) {
-        toast('삭제에 실패했습니다.');
-      }
-    });
   }
 
   // ---------- 내보내기/가져오기 ----------
@@ -756,17 +648,6 @@
       renderList();
     });
 
-    // 카테고리 순서 편집 토글
-    on($('#chip-order-btn'), 'click', toggleOrderEditMode);
-
-    // 카테고리 추가 모달
-    on($('#cat-cancel'), 'click', closeCategoryModal);
-    on($('#cat-submit'), 'click', submitCategoryModal);
-    on($('#cat-modal'), 'click', function (e) { if (e.target === this) closeCategoryModal(); });
-    on($('#cat-label-input'), 'keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); submitCategoryModal(); }
-    });
-
     on(document.querySelectorAll('#type-seg button'), 'click', function () {
       setTypeSeg(this.dataset.type);
       refreshPreview();
@@ -797,25 +678,37 @@
       }
     });
 
-    // 뷰어에서 길게 눌러 삭제/내보내기 등: 명확성을 위해 헤더의 닫기 옆에 숨긴 기능 대신
     // 뷰어 바디 롱프레스 -> 삭제 확인 (모바일 편의)
     let pressTimer = 0;
     const body = document.querySelector('#view-viewer .viewer-body');
     on(body, 'pointerdown', () => {
-      pressTimer = setTimeout(() => deleteCurrent(), 650);
+      pressTimer = setTimeout(() => {
+        const code = state.codes.find((c) => c.id === state.currentViewId);
+        if (code) confirmDeleteCode(code);
+      }, 650);
     });
     ['pointerup', 'pointerleave', 'pointercancel', 'scroll'].forEach((ev) =>
       on(body, ev, () => clearTimeout(pressTimer))
     );
 
-    // 카메라 결과/에러 핸들러 보관(재시도용)
-    const origOpenCamera = openCamera;
-    void origOpenCamera;
+    // ⋮ 메뉴 닫기
+    const menuBackdrop = document.getElementById('menu-backdrop');
+    on(menuBackdrop, 'click', closeCardMenu);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeCardMenu();
+    });
+
+    // 이름 수정 모달
+    on($('#rename-cancel'), 'click', closeRenameModal);
+    on($('#rename-submit'), 'click', submitRename);
+    on($('#rename-modal'), 'click', function (e) { if (e.target === this) closeRenameModal(); });
+    on($('#rename-input'), 'keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
+    });
   }
 
   CP.UI = {
     init() {
-      renderChips();
       renderList();
       bind();
     },
@@ -827,7 +720,6 @@
     requestClearAll,
     openSubview,
     closeSubview,
-    refreshCategorySelect,
     state
   };
 })();
